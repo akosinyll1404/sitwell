@@ -9,6 +9,7 @@ that data through **three integration points**:
 | 1 | App ↔ ESP32-C3 connection (transport) | `src/services/deviceConnection.ts` | Stub. Always offline |
 | 2 | ESP32-C3 firmware that sends the payloads below | firmware repo | Not started |
 | 3 | SQLite history storage | `src/services/historyRepository.ts` | Stub. Returns nothing |
+| 4 | SQLite settings storage | `src/services/settingsRepository.ts` | Uses localStorage for now (works, but move it to SQLite) |
 
 Search the code for `TODO(integration)` and `TODO(database)` to find the exact places.
 
@@ -161,6 +162,15 @@ are in `src/services/protocol.ts`.
   the new `lampConnected` value.
 - The app shows "Reconnecting…" for up to 8 s.
 
+```json
+{ "type": "command", "action": "set_alerts", "enabled": true, "repeat": false, "delaySeconds": 30, "feedback": "both" }
+```
+- Sent on connect and whenever the Settings change.
+- `enabled` is *Alert activation* AND *Posture alerts*.
+- `repeat` is *Alert repetition*.
+- `delaySeconds` is *Alert after*. It can replace the firmware's hard-coded `SUSTAIN_TIME`.
+- `feedback` is `"visual"`, `"sound"` or `"both"`. It controls whether the lamp lights up, buzzes, or both.
+
 ---
 
 ## 4. What each screen needs
@@ -197,7 +207,6 @@ All thresholds are in `src/config/monitoring.ts`:
 | `PITCH_THRESHOLD_DEG` | 15 | Pitch deviation from baseline that counts as poor posture |
 | `ROLL_THRESHOLD_DEG` | 10 | Roll deviation from baseline that counts as poor posture |
 | `STALE_DATA_MS` | 5000 | No data for this long → "no data" |
-| `BREAK_INTERVAL_MS` | 30 min | Break reminder interval |
 | `BREAK_MIN_MS` | 2 min | Standing time that counts as a break |
 | `CALIBRATION_SAMPLES` | 8 | Readings collected per calibration |
 | `CALIBRATION_MAX_STD_DEG` | 3 | Allowed movement while calibrating |
@@ -234,6 +243,14 @@ or Tauri commands backed by `rusqlite`):
   DATETIME type.
 - **Write settings:** enable WAL mode, and batch `posture_record` inserts
   (one transaction every 5–10 s).
+
+### Settings persistence
+
+`settingsRepository.ts` saves the Settings screen to the WebView's localStorage,
+so settings already survive restarts (FR-S4). When moving it to SQLite:
+- store each field as one row in `settings`: `alert_delay`,
+  `break_interval_minutes`, `posture_alerts_enabled`, and so on;
+- keep the `load()`/`save()` interface so the UI doesn't change.
 
 ### Calibration persistence
 
