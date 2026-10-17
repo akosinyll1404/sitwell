@@ -2,6 +2,7 @@ import { Bluetooth, BluetoothOff, LoaderCircle, Wifi, WifiOff, type LucideIcon }
 import { Checkbox, Select, SettingRow } from "../components/settings/SettingRow";
 import { Card } from "../components/ui/Card";
 import { OutlineButton } from "../components/ui/OutlineButton";
+import { Tooltip } from "../components/ui/Tooltip";
 import {
   DEVICE_HARDWARE,
   DEVICE_NAME,
@@ -74,28 +75,50 @@ export function SettingsPage({ snapshot, actions, settings, onChange, onRecalibr
           />
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={actions.connectDevice}
-            disabled={device !== "disconnected"}
-            className="cursor-pointer rounded-lg bg-brand px-5 py-2.5 text-[15px] text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          <Tooltip
+            content={device === "connected" ? "Already connected" : device === "connecting" ? "Scan in progress" : null}
+            align="start"
+            disabledTarget={device !== "disconnected"}
           >
-            {device === "connecting" ? "Scanning…" : "Scan for device"}
-          </button>
-          <OutlineButton
-            className="px-5 py-2.5 text-[15px]"
-            onClick={actions.reconnectDevice}
-            disabled={device === "connecting"}
+            <button
+              type="button"
+              onClick={actions.connectDevice}
+              disabled={device !== "disconnected"}
+              className="cursor-pointer rounded-lg bg-brand px-5 py-2.5 text-[15px] text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {device === "connecting" ? "Scanning…" : "Scan for device"}
+            </button>
+          </Tooltip>
+          <Tooltip
+            content={device === "connecting" ? "Connection in progress" : null}
+            disabledTarget={device === "connecting"}
           >
-            Reconnect / Retry
-          </OutlineButton>
-          <OutlineButton
-            className="px-5 py-2.5 text-[15px]"
-            onClick={actions.reconnectLamp}
-            disabled={device !== "connected" || lamp === "connecting"}
+            <OutlineButton
+              className="px-5 py-2.5 text-[15px]"
+              onClick={actions.reconnectDevice}
+              disabled={device === "connecting"}
+            >
+              Reconnect / Retry
+            </OutlineButton>
+          </Tooltip>
+          <Tooltip
+            content={
+              device !== "connected"
+                ? `Connect the ${DEVICE_NAME} first`
+                : lamp === "connecting"
+                  ? "Reconnecting to the lamp…"
+                  : null
+            }
+            disabledTarget={device !== "connected" || lamp === "connecting"}
           >
-            Reconnect lamp
-          </OutlineButton>
+            <OutlineButton
+              className="px-5 py-2.5 text-[15px]"
+              onClick={actions.reconnectLamp}
+              disabled={device !== "connected" || lamp === "connecting"}
+            >
+              Reconnect lamp
+            </OutlineButton>
+          </Tooltip>
         </div>
       </Card>
 
