@@ -3,7 +3,6 @@ import { CurrentPostureCard } from "../components/dashboard/CurrentPostureCard";
 import { DeviceStatusCard } from "../components/dashboard/DeviceStatusCard";
 import { FeedbackCard } from "../components/dashboard/FeedbackCard";
 import { PostureBanner } from "../components/dashboard/PostureBanner";
-import { QuickActions } from "../components/dashboard/QuickActions";
 import { SittingDurationCard } from "../components/dashboard/SittingDurationCard";
 import type { MonitoringActions } from "../hooks/useMonitoring";
 import type { MonitoringSnapshot } from "../types/monitoring";
@@ -58,8 +57,6 @@ export function DashboardPage({ snapshot, actions, settings, onNavigate }: Dashb
           onOpenSettings={() => onNavigate("settings")}
         />
       </div>
-
-      <QuickActions onNavigate={onNavigate} />
     </div>
   );
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- The Calibrate / Monitoring / History / Settings buttons at the bottom of the
+  Dashboard. The sidebar already covers navigation, and calibration is in
+  Settings.
+
 ## Phase 1.1: Settings page (2026-10-17)
 
 ### Added
