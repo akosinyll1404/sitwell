@@ -22,8 +22,7 @@ export const MAX_SAMPLE_GAP_MS = 3_000;
 export const CONNECT_TIMEOUT_MS = 4_000;
 export const LAMP_RECONNECT_TIMEOUT_MS = 8_000;
 
-// Breaks.
-export const BREAK_INTERVAL_MS = 30 * 60 * 1000;
+// Breaks. (The reminder interval itself is a user setting.)
 /** Standing up for at least this long counts as a break and resets the countdown. */
 export const BREAK_MIN_MS = 2 * 60 * 1000;
 

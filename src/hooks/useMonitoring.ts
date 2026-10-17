@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
-  BREAK_INTERVAL_MS,
   BREAK_MIN_MS,
   LAMP_RECONNECT_TIMEOUT_MS,
   MAX_SAMPLE_GAP_MS,
@@ -174,7 +173,7 @@ function derivePhase(state: State, now: number): MonitoringPhase {
   return "running";
 }
 
-function deriveSnapshot(state: State, now: number): MonitoringSnapshot {
+function deriveSnapshot(state: State, now: number, breakIntervalMs: number): MonitoringSnapshot {
   const phase = derivePhase(state, now);
   let posture: PostureStatus = "no_data";
   let session = state.session;
@@ -210,8 +209,8 @@ function deriveSnapshot(state: State, now: number): MonitoringSnapshot {
     latestReading: state.lastReading,
     session,
     timeline: state.timeline,
-    breakRemainingMs: Math.max(0, BREAK_INTERVAL_MS - (session.elapsedMs - state.breakAnchorMs)),
-    breakIntervalMs: BREAK_INTERVAL_MS,
+    breakRemainingMs: Math.max(0, breakIntervalMs - (session.elapsedMs - state.breakAnchorMs)),
+    breakIntervalMs,
   };
 }
 
@@ -223,7 +222,12 @@ export interface MonitoringActions {
   rescheduleBreak: () => void;
 }
 
-export function useMonitoring(): [MonitoringSnapshot, MonitoringActions] {
+export interface MonitoringOptions {
+  /** Break reminder interval (from Settings). */
+  breakIntervalMs: number;
+}
+
+export function useMonitoring({ breakIntervalMs }: MonitoringOptions): [MonitoringSnapshot, MonitoringActions] {
   const now = useNow(1000);
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
 
@@ -242,7 +246,7 @@ export function useMonitoring(): [MonitoringSnapshot, MonitoringActions] {
     };
   }, []);
 
-  const snapshot = deriveSnapshot(state, now);
+  const snapshot = deriveSnapshot(state, now, breakIntervalMs);
   const snapshotRef = useRef(snapshot);
   useEffect(() => {
     snapshotRef.current = snapshot;

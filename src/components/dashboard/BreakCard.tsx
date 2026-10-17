@@ -7,10 +7,24 @@ interface BreakCardProps {
   remainingMs: number;
   /** The countdown only moves while the user is sitting and monitored. */
   running: boolean;
+  /** Break reminders setting. */
+  enabled: boolean;
   onReschedule: () => void;
+  onOpenSettings: () => void;
 }
 
-export function BreakCard({ remainingMs, running, onReschedule }: BreakCardProps) {
+export function BreakCard({ remainingMs, running, enabled, onReschedule, onOpenSettings }: BreakCardProps) {
+  if (!enabled) {
+    return (
+      <Card title="Take a break in">
+        <div className="flex flex-col items-center gap-3 rounded-xl bg-idle-bg px-4 py-6 text-center">
+          <p className="text-idle-fg">Break reminders are turned off.</p>
+          <OutlineButton onClick={onOpenSettings}>Open Settings</OutlineButton>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card title="Take a break in">
       <div className="flex flex-col items-center gap-3 rounded-xl bg-poor-bg px-4 py-4">

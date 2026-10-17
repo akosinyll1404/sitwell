@@ -46,4 +46,13 @@ export type AppCommand =
   /** Ask the ESP32-C3 to re-establish its BLE link to the lamp. */
   | { type: "command"; action: "lamp_reconnect" }
   /** Tell the lamp which feedback state to show. Sent whenever posture changes. */
-  | { type: "command"; action: "set_lamp"; state: LampState };
+  | { type: "command"; action: "set_lamp"; state: LampState }
+  /** Alert preferences from Settings. Sent on connect and whenever they change. */
+  | {
+      type: "command";
+      action: "set_alerts";
+      enabled: boolean;
+      repeat: boolean;
+      delaySeconds: number;
+      feedback: "visual" | "sound" | "both";
+    };

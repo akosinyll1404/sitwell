@@ -13,6 +13,8 @@ interface CalibrationPageProps {
   onConnectDevice: () => void;
   onCalibrated: (baseline: CalibrationBaseline) => void;
   onContinue: () => void;
+  /** Label for the secondary button in recalibrate mode. */
+  backLabel?: string;
 }
 
 const STEPS = [
@@ -30,6 +32,7 @@ export function CalibrationPage({
   onConnectDevice,
   onCalibrated,
   onContinue,
+  backLabel = "Back to Dashboard",
 }: CalibrationPageProps) {
   const [progress, startCalibration] = useCalibration(onCalibrated);
   const connected = deviceState === "connected";
@@ -86,7 +89,7 @@ export function CalibrationPage({
                   onClick={onContinue}
                   disabled={mode === "onboarding" && !calibrated}
                 >
-                  {mode === "onboarding" ? "Continue to Dashboard" : "Back to Dashboard"}
+                  {mode === "onboarding" ? "Continue to Dashboard" : backLabel}
                 </OutlineButton>
               </div>
 
