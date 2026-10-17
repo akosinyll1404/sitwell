@@ -1,4 +1,4 @@
-import { Check, CircleHelp, TriangleAlert } from "lucide-react";
+import { Check, CircleHelp, OctagonAlert, TriangleAlert } from "lucide-react";
 import { PHASE_COPY, POSTURE_COPY } from "../../config/posture";
 import type { MonitoringPhase, PostureStatus } from "../../types/monitoring";
 import { Card } from "../ui/Card";
@@ -18,8 +18,10 @@ export function CurrentPostureCard({ phase, posture }: CurrentPostureCardProps) 
   const icon =
     posture === "good" ? (
       <Check className="h-7 w-7 text-good-accent" strokeWidth={2.5} />
+    ) : posture === "slouching" ? (
+      <TriangleAlert className="h-7 w-7 text-slouch-accent" strokeWidth={2.25} />
     ) : posture === "poor" ? (
-      <TriangleAlert className="h-7 w-7 text-poor-accent" strokeWidth={2.25} />
+      <OctagonAlert className="h-7 w-7 text-bad-accent" strokeWidth={2.25} />
     ) : (
       <CircleHelp className="h-7 w-7 text-slate-400" strokeWidth={2.25} />
     );

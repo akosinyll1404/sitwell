@@ -1,20 +1,26 @@
 import type { PostureStatus } from "../../types/monitoring";
 
 /**
- * Seated figure with a spine guide line. The upper body tilts forward for
- * poor posture and the whole figure fades when there is no data.
+ * Seated figure with a spine guide line. The upper body tilts forward a
+ * little when slouching and further for poor posture; the figure fades when
+ * there is no data.
  */
+const FIGURE = {
+  good: { lean: 0, guide: "#22a35a", shirt: "#74c493" },
+  slouching: { lean: 12, guide: "#f97316", shirt: "#fdba74" },
+  poor: { lean: 24, guide: "#dc2626", shirt: "#f87171" },
+  no_data: { lean: 0, guide: "#22a35a", shirt: "#74c493" },
+};
+
 export function PostureIllustration({ posture }: { posture: PostureStatus }) {
-  const lean = posture === "poor" ? 20 : 0;
-  const guideColor = posture === "poor" ? "#f59e0b" : "#22a35a";
-  const shirt = posture === "poor" ? "#f2b45a" : "#74c493";
+  const { lean, guide: guideColor, shirt } = FIGURE[posture];
 
   return (
     <svg
       viewBox="0 0 240 160"
       className={`h-full w-full ${posture === "no_data" ? "opacity-40 grayscale" : ""}`}
       role="img"
-      aria-label={`Illustration of ${posture === "poor" ? "slouched" : "upright"} sitting posture`}
+      aria-label={`Illustration of ${posture === "good" || posture === "no_data" ? "upright" : "slouched"} sitting posture`}
     >
       {/* Floor */}
       <line x1="40" y1="150" x2="200" y2="150" stroke="#8a9bb8" strokeWidth="2.5" strokeLinecap="round" />

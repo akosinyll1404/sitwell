@@ -18,9 +18,20 @@
   --color-good-strong: #15803d;
   --color-good-accent: #22a35a;
 
-  --color-poor-bg: #fdf3e3;
-  --color-poor-fg: #9a4a0b;
-  --color-poor-accent: #f59e0b;
+  /* Amber: break reminders, "connecting" states, poor time in charts. */
+  --color-warn-bg: #fdf3e3;
+  --color-warn-fg: #9a4a0b;
+  --color-warn-accent: #f59e0b;
+
+  /* Slouching (lamp: orange). */
+  --color-slouch-bg: #fff0e5;
+  --color-slouch-fg: #c2410c;
+  --color-slouch-accent: #f97316;
+
+  /* Poor posture (lamp: red). */
+  --color-bad-bg: #fdecec;
+  --color-bad-fg: #b91c1c;
+  --color-bad-accent: #dc2626;
 
   --color-idle-bg: #eef2f7;
   --color-idle-fg: #475569;

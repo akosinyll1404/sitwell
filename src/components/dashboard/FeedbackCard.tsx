@@ -1,4 +1,4 @@
-import { PHASE_COPY, POSTURE_COPY, TONE_PANEL, type Tone } from "../../config/posture";
+import { PHASE_COPY, POSTURE_COPY, TONE_PANEL, postureTone, type Tone } from "../../config/posture";
 import type { MonitoringPhase, PostureStatus } from "../../types/monitoring";
 import { Card } from "../ui/Card";
 
@@ -15,10 +15,10 @@ export function FeedbackCard({ phase, posture, breakDue }: FeedbackCardProps) {
   if (phase === "running" && breakDue) {
     // A due break takes priority over routine posture feedback.
     message = "Time for a break! Stand up, stretch, and rest your eyes for a few minutes.";
-    tone = "poor";
+    tone = "break";
   } else if (phase === "running" && posture !== "no_data") {
     message = POSTURE_COPY[posture].feedback;
-    tone = posture;
+    tone = postureTone(posture);
   } else {
     message = PHASE_COPY[phase === "running" ? "awaiting_data" : phase].feedback;
     tone = "idle";

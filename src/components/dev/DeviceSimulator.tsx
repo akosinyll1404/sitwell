@@ -127,7 +127,7 @@ export function DeviceSimulator({ sampleHistory, onSampleHistoryChange }: Device
           onChange={(e) => setPosture(e.target.value as "good" | "poor")}
         >
           <option value="good">Good (pitch ≈ {BASE_PITCH}°)</option>
-          <option value="poor">Slouching (pitch ≈ {POOR_PITCH}°)</option>
+          <option value="poor">Bad posture (pitch ≈ {POOR_PITCH}°)</option>
         </select>
       </label>
 

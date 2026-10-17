@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- **Posture now has 3 states, matching the BLE Lamp colors (FR-D1):**
+  - **Good Posture** (lamp white, UI green)
+  - **Slouching** (lamp orange, UI orange): deviating for less than *Alert after*
+  - **Poor Posture** (lamp red, UI red): deviating for *Alert after* or longer
+  - Each state has its own banner color, figure lean, icon and feedback message.
+  - The `set_lamp` command now sends `"good"`, `"slouching"`, `"poor"` or `"off"`.
+- The "Alert after" setting now controls when Slouching turns into Poor
+  Posture.
+- Renamed the amber color tokens from `poor-*` to `warn-*`. Amber is still used
+  for break reminders, "connecting" states and poor time in charts.
+
 ### Added
 
 - **Tooltips** (shown on hover and keyboard focus), using a reusable
