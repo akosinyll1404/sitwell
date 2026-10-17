@@ -1,50 +1,70 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect, useState } from "react";
+import { DeviceSimulator } from "./components/dev/DeviceSimulator";
+import { Sidebar } from "./components/layout/Sidebar";
+import { useMonitoring } from "./hooks/useMonitoring";
+import { CalibrationPage } from "./pages/CalibrationPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { HistoryPage } from "./pages/HistoryPage";
+import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { deviceConnection } from "./services/deviceConnection";
+import type { Route } from "./types/navigation";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  // Calibration is the first screen on every launch until a saved baseline
+  // can be loaded from the database.
+  const [route, setRoute] = useState<Route>("calibration");
+  const [onboarded, setOnboarded] = useState(false);
+  const [sampleHistory, setSampleHistory] = useState(false);
+  // Lives at the top level so monitoring keeps running across screens.
+  const [snapshot, actions] = useMonitoring();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  // Try to reach the device on startup. In phase 1 this times out → offline.
+  useEffect(() => {
+    deviceConnection.connect();
+  }, []);
+
+  const goToDashboard = () => {
+    setOnboarded(true);
+    setRoute("dashboard");
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <>
+      {route === "calibration" ? (
+        <main className="h-full overflow-y-auto">
+          <CalibrationPage
+            mode={onboarded ? "recalibrate" : "onboarding"}
+            deviceState={snapshot.connections.device}
+            existingBaseline={snapshot.calibration}
+            onConnectDevice={actions.connectDevice}
+            onCalibrated={actions.saveCalibration}
+            onContinue={goToDashboard}
+          />
+        </main>
+      ) : (
+        <div className="flex h-full">
+          <Sidebar active={route} onNavigate={setRoute} />
+          <main className="flex-1 overflow-y-auto px-8 py-6">
+            <div className="mx-auto max-w-6xl">
+              {route === "dashboard" && (
+                <DashboardPage snapshot={snapshot} actions={actions} onNavigate={setRoute} />
+              )}
+              {route === "history" && <HistoryPage snapshot={snapshot} useSampleData={sampleHistory} />}
+              {route === "settings" && (
+                <PlaceholderPage
+                  title="Settings"
+                  subtitle="Manage your device, calibration, and notifications."
+                />
+              )}
+            </div>
+          </main>
+        </div>
+      )}
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      {import.meta.env.DEV && (
+        <DeviceSimulator sampleHistory={sampleHistory} onSampleHistoryChange={setSampleHistory} />
+      )}
+    </>
   );
 }
 

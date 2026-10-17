@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Design tokens taken from the Sitwell Pro desktop design. */
+@theme {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f2f6fc;
+  --color-sidebar: #e8f0fb;
+  --color-line: #e2e8f0;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+
+  --color-brand: #2563eb;
+  --color-brand-soft: #bfd3f8;
+
+  --color-good-bg: #e7f5ec;
+  --color-good-fg: #166534;
+  --color-good-strong: #15803d;
+  --color-good-accent: #22a35a;
+
+  --color-poor-bg: #fdf3e3;
+  --color-poor-fg: #9a4a0b;
+  --color-poor-accent: #f59e0b;
+
+  --color-idle-bg: #eef2f7;
+  --color-idle-fg: #475569;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
