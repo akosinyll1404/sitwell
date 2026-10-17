@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- **Tooltips** (shown on hover and keyboard focus), using a reusable
+  `Tooltip` / `InfoTip` component:
+  - **Disabled buttons explain why they're disabled:** BLE Lamp Reconnect,
+    Reschedule Break, Scan for device, Reconnect / Retry, Reconnect lamp,
+    Start calibration, and Continue to Dashboard.
+  - **ⓘ info icons** next to Sitting Duration Tracking, Take a break in,
+    Deviations detected, Acceptable posture, and Total monitored.
+
 ### Removed
 
 - The Calibrate / Monitoring / History / Settings buttons at the bottom of the

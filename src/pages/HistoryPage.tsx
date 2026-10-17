@@ -52,12 +52,14 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
           />
           <StatTile
             label="Deviations detected"
+            info="Times your posture went from good to poor during this session."
             value={String(session.deviations)}
             sub={`Total ${formatDuration(session.poorMs).replace("m", " min")}`}
           />
           <StatTile
             className="col-span-2"
             label="Acceptable posture"
+            info="Share of sitting time within your calibrated posture range."
             value={session.elapsedMs > 0 ? `${percent(session.goodMs, session.elapsedMs)}%` : "—"}
             sub="Time in range"
           />
@@ -79,6 +81,7 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
           />
           <StatTile
             label="Total monitored"
+            info="Sitting time recorded today while monitoring was running."
             value={formatDuration(daily.totalMs)}
             sub={`${daily.breaksTaken} ${daily.breaksTaken === 1 ? "break" : "breaks"} taken`}
           />

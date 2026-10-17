@@ -4,6 +4,7 @@ import { useCalibration, type CalibrationProgress } from "../hooks/useCalibratio
 import { formatClock, formatDate } from "../lib/time";
 import type { CalibrationBaseline, ConnectionState } from "../types/monitoring";
 import { OutlineButton } from "../components/ui/OutlineButton";
+import { Tooltip } from "../components/ui/Tooltip";
 
 interface CalibrationPageProps {
   /** "onboarding" on first launch; "recalibrate" when opened from the app. */
@@ -38,6 +39,7 @@ export function CalibrationPage({
   const connected = deviceState === "connected";
   const collecting = progress.status === "collecting";
   const calibrated = progress.status === "success" || existingBaseline !== null;
+  const continueLocked = mode === "onboarding" && !calibrated;
 
   const startLabel =
     progress.status === "failed" ? "Try again" : calibrated ? "Recalibrate" : "Start calibration";
@@ -76,21 +78,28 @@ export function CalibrationPage({
               </ol>
 
               <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={startCalibration}
-                  disabled={!connected || collecting}
-                  className="cursor-pointer rounded-lg bg-brand px-5 py-3 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                <Tooltip
+                  content={!connected ? "Connect the SitWell device first" : collecting ? "Calibration in progress" : null}
+                  align="start"
+                  disabledTarget={!connected || collecting}
                 >
-                  {collecting ? "Calibrating…" : startLabel}
-                </button>
-                <OutlineButton
-                  className="px-5 py-3 text-base"
-                  onClick={onContinue}
-                  disabled={mode === "onboarding" && !calibrated}
+                  <button
+                    type="button"
+                    onClick={startCalibration}
+                    disabled={!connected || collecting}
+                    className="cursor-pointer rounded-lg bg-brand px-5 py-3 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {collecting ? "Calibrating…" : startLabel}
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  content={continueLocked ? "Finish calibration first, or choose Skip for now" : null}
+                  disabledTarget={continueLocked}
                 >
-                  {mode === "onboarding" ? "Continue to Dashboard" : backLabel}
-                </OutlineButton>
+                  <OutlineButton className="px-5 py-3 text-base" onClick={onContinue} disabled={continueLocked}>
+                    {mode === "onboarding" ? "Continue to Dashboard" : backLabel}
+                  </OutlineButton>
+                </Tooltip>
               </div>
 
               <p className="mt-4 text-sm text-muted">

@@ -15,7 +15,11 @@ export function SittingDurationCard({ elapsedMs, phase }: SittingDurationCardPro
     running ? "Monitoring in progress" : elapsedMs > 0 ? `Paused · ${PHASE_COPY[phase].timer}` : PHASE_COPY[phase].timer;
 
   return (
-    <Card title="Sitting Duration Tracking" className="flex-1">
+    <Card
+      title="Sitting Duration Tracking"
+      info="Counts only while the device is connected, you're calibrated, and you're sitting."
+      className="flex-1"
+    >
       <div
         className={`flex flex-col items-center rounded-xl px-4 py-4 ${
           running ? "bg-good-bg" : "bg-idle-bg"

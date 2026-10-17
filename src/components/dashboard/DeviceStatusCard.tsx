@@ -16,6 +16,7 @@ import {
 import type { ConnectionState, MonitoringPhase } from "../../types/monitoring";
 import { Card } from "../ui/Card";
 import { OutlineButton } from "../ui/OutlineButton";
+import { Tooltip } from "../ui/Tooltip";
 
 interface DeviceStatusCardProps {
   device: ConnectionState;
@@ -61,6 +62,7 @@ export function DeviceStatusCard({
           }}
           buttonLabel={deviceConnected ? "Reconnect" : "Connect"}
           buttonDisabled={device === "connecting"}
+          disabledReason="Connection in progress"
           onButton={deviceConnected ? onReconnectDevice : onConnectDevice}
           ariaName={DEVICE_NAME}
         />
@@ -81,6 +83,7 @@ export function DeviceStatusCard({
           }}
           buttonLabel="Reconnect"
           buttonDisabled={!deviceConnected || lamp === "connecting"}
+          disabledReason={!deviceConnected ? `Connect the ${DEVICE_NAME} first` : "Reconnecting to the lamp…"}
           onButton={onReconnectLamp}
           ariaName={LAMP_NAME}
         />
@@ -96,6 +99,8 @@ interface ConnectionRowProps {
   detail: Record<ConnectionState, string>;
   buttonLabel: string;
   buttonDisabled: boolean;
+  /** Tooltip explaining why the button is disabled. */
+  disabledReason: string;
   onButton: () => void;
   ariaName: string;
 }
@@ -107,6 +112,7 @@ function ConnectionRow({
   detail,
   buttonLabel,
   buttonDisabled,
+  disabledReason,
   onButton,
   ariaName,
 }: ConnectionRowProps) {
@@ -132,9 +138,11 @@ function ConnectionRow({
           {detail[state]}
         </p>
       </div>
-      <OutlineButton onClick={onButton} disabled={buttonDisabled} aria-label={`${buttonLabel} ${ariaName}`}>
-        {buttonLabel}
-      </OutlineButton>
+      <Tooltip content={buttonDisabled ? disabledReason : null} align="end" disabledTarget={buttonDisabled}>
+        <OutlineButton onClick={onButton} disabled={buttonDisabled} aria-label={`${buttonLabel} ${ariaName}`}>
+          {buttonLabel}
+        </OutlineButton>
+      </Tooltip>
     </div>
   );
 }
