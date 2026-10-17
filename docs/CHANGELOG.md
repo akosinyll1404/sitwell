@@ -10,7 +10,8 @@
     Reschedule Break, Scan for device, Reconnect / Retry, Reconnect lamp,
     Start calibration, and Continue to Dashboard.
   - **ⓘ info icons** next to Sitting Duration Tracking, Take a break in,
-    Deviations detected, Acceptable posture, and Total monitored.
+    Deviations detected, Acceptable posture, Total monitored, and the daily
+    Deviations tile.
 
 ### Removed
 

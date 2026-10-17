@@ -85,7 +85,11 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
             value={formatDuration(daily.totalMs)}
             sub={`${daily.breaksTaken} ${daily.breaksTaken === 1 ? "break" : "breaks"} taken`}
           />
-          <StatTile label="Deviations" value={String(daily.deviations)} />
+          <StatTile
+            label="Deviations"
+            info="Times your posture went from good to poor across all of today's sessions."
+            value={String(daily.deviations)}
+          />
         </div>
 
         <p className="mt-5 mb-2 text-sm text-slate-600">Posture throughout the day</p>
