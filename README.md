@@ -65,3 +65,10 @@ Build for production:
 ```bash
 npm run tauri build
 ```
+
+## Project Docs
+
+- [docs/CHANGELOG.md](docs/CHANGELOG.md): what has been built so far
+- [docs/INTEGRATION.md](docs/INTEGRATION.md): how to connect the ESP32-C3, BLE Lamp and database; JSON payload contract
+
+In `npm run tauri dev`, use the **Device simulator** button (bottom-right) to test all states without hardware.
