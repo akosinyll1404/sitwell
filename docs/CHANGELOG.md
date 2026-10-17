@@ -1,5 +1,34 @@
 # Changelog
 
+## Phase 1.1: Settings page (2026-10-17)
+
+### Added
+
+- **Settings (design screen 4)**, with changes saved automatically:
+  - **Device Connection:**
+    - both links (SitWell device and BLE Lamp), each with a status pill;
+    - **Scan for device**, **Reconnect / Retry** and **Reconnect lamp** buttons.
+  - **Posture Calibration:** the steps list, plus a status panel:
+    - "Calibration completed · Last calibrated …" with **Recalibrate**, or
+    - "Not calibrated yet" with **Calibrate now**.
+    - Recalibrating returns you to Settings afterwards.
+  - **Notification Settings:** Posture alerts, **Alert after** (new, FR-S2),
+    Break reminders, Reminder interval (15–90 min).
+  - **Feedback Settings:** Alert activation, Alert repetition, **Feedback type**
+    (Visual / Sound / Visual + sound, FR-S3).
+- **Settings take effect:**
+  - The reminder interval drives the dashboard break countdown.
+  - Turning off break reminders hides the countdown and the "time for a break"
+    message.
+- **Settings persist across restarts** (FR-S4). This uses localStorage until
+  SQLite is added.
+- New `set_alerts` command, so the device can mirror the alert settings
+  (see INTEGRATION.md).
+
+### Not done yet
+
+- OS notifications and sound playback that use these settings (FR-N1–N4).
+
 ## Phase 1: UI shell (2026-10-17)
 
 The front-end for the Dashboard, Calibration and History screens, built from
@@ -55,6 +84,5 @@ yet. See [INTEGRATION.md](INTEGRATION.md) for what plugs in where.
 ### Not done yet
 
 - The real ESP32 connection, the firmware, and SQLite persistence.
-- Settings screen (currently a placeholder).
 - OS notifications (FR-N1–N4) and sound feedback (FR-S3).
 - Calibration persistence across restarts (needs the database).

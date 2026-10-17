@@ -7,15 +7,17 @@ import { QuickActions } from "../components/dashboard/QuickActions";
 import { SittingDurationCard } from "../components/dashboard/SittingDurationCard";
 import type { MonitoringActions } from "../hooks/useMonitoring";
 import type { MonitoringSnapshot } from "../types/monitoring";
+import type { AppSettings } from "../types/settings";
 import type { Route } from "../types/navigation";
 
 interface DashboardPageProps {
   snapshot: MonitoringSnapshot;
   actions: MonitoringActions;
+  settings: AppSettings;
   onNavigate: (route: Route) => void;
 }
 
-export function DashboardPage({ snapshot, actions, onNavigate }: DashboardPageProps) {
+export function DashboardPage({ snapshot, actions, settings, onNavigate }: DashboardPageProps) {
   const running = snapshot.phase === "running";
 
   return (
@@ -46,12 +48,14 @@ export function DashboardPage({ snapshot, actions, onNavigate }: DashboardPagePr
         <FeedbackCard
           phase={snapshot.phase}
           posture={snapshot.posture}
-          breakDue={snapshot.breakRemainingMs === 0}
+          breakDue={settings.breakReminders && snapshot.breakRemainingMs === 0}
         />
         <BreakCard
           remainingMs={snapshot.breakRemainingMs}
           running={running}
+          enabled={settings.breakReminders}
           onReschedule={actions.rescheduleBreak}
+          onOpenSettings={() => onNavigate("settings")}
         />
       </div>
 
