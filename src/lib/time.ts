@@ -22,6 +22,24 @@ export function startOfDay(ts: number): number {
   return d.getTime();
 }
 
+/** Local midnight `n` days after `dayStart` (negative = earlier). DST-safe. */
+export function addDays(dayStart: number, n: number): number {
+  const d = new Date(dayStart);
+  d.setDate(d.getDate() + n);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** e.g. "Mon" */
+export function formatWeekday(ts: number): string {
+  return new Date(ts).toLocaleDateString("en-US", { weekday: "short" });
+}
+
+/** e.g. "Oct 14" */
+export function formatShortDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 /** e.g. "Oct 14, 2026" */
 export function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
