@@ -253,7 +253,7 @@ or Tauri commands backed by `rusqlite`):
 
 | Method | Used by |
 |--------|---------|
-| `listSessions({ limit })` | Session History table, daily summary |
+| `listSessions({ limit, offset })` | Session History table, one page at a time. Return `{ sessions, total }`: `SELECT * FROM session ORDER BY start_time DESC LIMIT ? OFFSET ?` plus `SELECT COUNT(*) FROM session` |
 | `getTimeline(dayStart)` | "Posture throughout the day" chart (30-min slots) for the day being viewed |
 | `getDailyTotals(fromDay, toDay)` | "Last 7 Days" chart and the Daily Progress Summary for any day. One row per day with data: `SELECT date(start_time/1000, 'unixepoch', 'localtime') AS day, SUM(good_posture_seconds), SUM(slouch_posture_seconds), SUM(poor_posture_seconds), SUM(deviation_count), SUM(breaks_taken) FROM session WHERE … GROUP BY day` |
 | `saveSession(session)` | **Not called yet.** Call it periodically (e.g. every 30 s) and when a session ends, from `useMonitoring` |

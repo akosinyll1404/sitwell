@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
-import { sampleDailyTotals, sampleSessions, sampleTimeline } from "../dev/sampleHistory";
+import { sampleDailyTotals, sampleTimeline } from "../dev/sampleHistory";
 import { mergeTimelines } from "../lib/posture";
 import { addDays, startOfDay } from "../lib/time";
-import {
-  historyRepository,
-  type DayTotals,
-  type SessionRecord,
-} from "../services/historyRepository";
+import { historyRepository, type DayTotals } from "../services/historyRepository";
 import type { MonitoringSnapshot, TimelineBucket } from "../types/monitoring";
 
 export interface DailySummary extends DayTotals {
@@ -22,13 +18,11 @@ export interface HistoryData {
   selected: DailySummary;
   /** Timeline slots for the day being viewed. */
   timeline: TimelineBucket[];
-  sessions: SessionRecord[];
 }
 
 const WEEK_DAYS = 7;
 
 interface Stored {
-  sessions: SessionRecord[];
   totals: DayTotals[];
   timeline: TimelineBucket[];
   /** Which day `timeline` belongs to (avoids showing a stale day while loading). */
@@ -53,7 +47,6 @@ export function useHistory(
   const rangeStart = Math.min(weekStart, selectedDay);
 
   const [stored, setStored] = useState<Stored>({
-    sessions: [],
     totals: [],
     timeline: [],
     timelineDay: null,
@@ -62,14 +55,13 @@ export function useHistory(
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const [sessions, totals, timeline] = useSampleData
-        ? [sampleSessions(today), sampleDailyTotals(rangeStart, today), sampleTimeline(selectedDay)]
+      const [totals, timeline] = useSampleData
+        ? [sampleDailyTotals(rangeStart, today), sampleTimeline(selectedDay)]
         : await Promise.all([
-            historyRepository.listSessions({ limit: 20 }),
             historyRepository.getDailyTotals(rangeStart, today),
             historyRepository.getTimeline(selectedDay),
           ]);
-      if (!cancelled) setStored({ sessions, totals, timeline, timelineDay: selectedDay });
+      if (!cancelled) setStored({ totals, timeline, timelineDay: selectedDay });
     };
     load().catch((error) => console.error("[history] Failed to load history", error));
     return () => {
@@ -109,6 +101,5 @@ export function useHistory(
     week,
     selected: totalsFor(selectedDay),
     timeline: mergeTimelines(savedTimeline, liveTimeline),
-    sessions: stored.sessions,
   };
 }

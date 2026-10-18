@@ -1,6 +1,6 @@
 import { TIMELINE_BUCKET_MS } from "../config/monitoring";
 import { addDays, startOfDay } from "../lib/time";
-import type { DayTotals, SessionRecord } from "../services/historyRepository";
+import type { DayTotals, SessionPage, SessionRecord } from "../services/historyRepository";
 import type { TimelineBucket } from "../types/monitoring";
 
 /**
@@ -87,11 +87,19 @@ function sessionsForDay(dayStart: number): SessionRecord[] {
     .reverse(); // newest first
 }
 
+const SAMPLE_DAYS = 30;
+
 /** Sessions from the last `days` days, newest first. */
-export function sampleSessions(today: number, days = 7): SessionRecord[] {
+export function sampleSessions(today: number, days = SAMPLE_DAYS): SessionRecord[] {
   const sessions: SessionRecord[] = [];
   for (let i = 0; i < days; i++) sessions.push(...sessionsForDay(addDays(today, -i)));
   return sessions;
+}
+
+/** One page of the sample sessions (mirrors historyRepository.listSessions). */
+export function sampleSessionPage(today: number, offset: number, limit: number): SessionPage {
+  const all = sampleSessions(today);
+  return { sessions: all.slice(offset, offset + limit), total: all.length };
 }
 
 export function sampleDailyTotals(fromDay: number, toDay: number): DayTotals[] {
