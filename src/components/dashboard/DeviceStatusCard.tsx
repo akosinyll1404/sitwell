@@ -119,12 +119,12 @@ function ConnectionRow({
   const Icon = state === "connecting" ? LoaderCircle : icon;
   const iconColor = {
     connected: "text-brand",
-    connecting: "text-poor-accent animate-spin",
+    connecting: "text-warn-accent animate-spin",
     disconnected: "text-slate-400",
   }[state];
   const dot = {
     connected: "bg-good-accent",
-    connecting: "bg-poor-accent animate-pulse",
+    connecting: "bg-warn-accent animate-pulse",
     disconnected: "bg-slate-400",
   }[state];
 

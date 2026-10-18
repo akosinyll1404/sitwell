@@ -31,8 +31,8 @@ export function BreakCard({ remainingMs, running, enabled, onReschedule, onOpenS
 
   return (
     <Card title="Take a break in" info={BREAK_INFO}>
-      <div className="flex flex-col items-center gap-3 rounded-xl bg-poor-bg px-4 py-4">
-        <div className={`flex items-center gap-3 text-poor-fg ${running ? "" : "opacity-60"}`}>
+      <div className="flex flex-col items-center gap-3 rounded-xl bg-warn-bg px-4 py-4">
+        <div className={`flex items-center gap-3 text-warn-fg ${running ? "" : "opacity-60"}`}>
           <Coffee className="h-6 w-6" strokeWidth={2} />
           <span className="text-base">Next break:</span>
           <span className="text-5xl leading-tight font-extrabold tabular-nums">

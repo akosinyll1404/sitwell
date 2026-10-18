@@ -142,7 +142,7 @@ export function SettingsPage({ snapshot, actions, settings, onChange, onRecalibr
               onChange={(postureAlerts) => onChange({ postureAlerts })}
             />
           </SettingRow>
-          <SettingRow label="Alert after" description="Poor posture must last this long" htmlFor="alert-delay">
+          <SettingRow label="Alert after" description="Slouching turns into poor posture after" htmlFor="alert-delay">
             <Select
               id="alert-delay"
               value={settings.alertDelaySeconds}
@@ -223,7 +223,7 @@ function DeviceRow({
 }) {
   const pill = {
     connected: { text: "Connected", cls: "bg-good-bg text-good-fg" },
-    connecting: { text: "Connecting…", cls: "bg-poor-bg text-poor-fg" },
+    connecting: { text: "Connecting…", cls: "bg-warn-bg text-warn-fg" },
     disconnected: { text: "Offline", cls: "bg-idle-bg text-idle-fg" },
   }[state];
   const ShownIcon = state === "connecting" ? LoaderCircle : Icon;
@@ -232,7 +232,7 @@ function DeviceRow({
     <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
       <ShownIcon
         className={`h-6 w-6 shrink-0 ${
-          state === "connected" ? "text-brand" : state === "connecting" ? "animate-spin text-poor-accent" : "text-slate-400"
+          state === "connected" ? "text-brand" : state === "connecting" ? "animate-spin text-warn-accent" : "text-slate-400"
         }`}
         strokeWidth={2}
       />

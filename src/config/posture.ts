@@ -1,25 +1,35 @@
 import type { MonitoringPhase, PostureStatus } from "../types/monitoring";
 
-export type Tone = "good" | "poor" | "idle";
+/** Color tone of a panel. "break" is the amber used for break reminders. */
+export type Tone = "good" | "slouching" | "poor" | "break" | "idle";
 
 /** Labels for each posture state. */
 export const POSTURE_LABEL: Record<PostureStatus, string> = {
   good: "Good Posture",
+  slouching: "Slouching",
   poor: "Poor Posture",
   no_data: "No Data",
 };
 
 /** Copy while monitoring is running, by posture. */
-export const POSTURE_COPY: Record<"good" | "poor", { headline: string; detail: string; feedback: string }> = {
+export const POSTURE_COPY: Record<
+  Exclude<PostureStatus, "no_data">,
+  { headline: string; detail: string; feedback: string }
+> = {
   good: {
     headline: "Posture is acceptable",
     detail: "No deviation detected. Data is up to date.",
     feedback: "Good posture, keep it up! Don't forget to take a break once in a while.",
   },
-  poor: {
-    headline: "Posture needs correction",
+  slouching: {
+    headline: "You're slouching",
     detail: "Deviation from your baseline detected.",
-    feedback: "You're slouching. Straighten your back and relax your shoulders.",
+    feedback: "You're starting to slouch. Straighten your back and relax your shoulders.",
+  },
+  poor: {
+    headline: "Poor posture",
+    detail: "You've been slouching for too long.",
+    feedback: "You've been slouching for a while. Sit up straight now and relax your shoulders.",
   },
 };
 
@@ -55,12 +65,14 @@ export const PHASE_COPY: Record<
 };
 
 export function postureTone(posture: PostureStatus): Tone {
-  return posture === "good" ? "good" : posture === "poor" ? "poor" : "idle";
+  return posture === "no_data" ? "idle" : posture;
 }
 
 /** Tailwind classes for each tone's soft panel (banner, feedback box, pill). */
 export const TONE_PANEL: Record<Tone, string> = {
   good: "bg-good-bg text-good-fg",
-  poor: "bg-poor-bg text-poor-fg",
+  slouching: "bg-slouch-bg text-slouch-fg",
+  poor: "bg-bad-bg text-bad-fg",
+  break: "bg-warn-bg text-warn-fg",
   idle: "bg-idle-bg text-idle-fg",
 };

@@ -151,8 +151,19 @@ are in `src/services/protocol.ts`.
 { "type": "command", "action": "set_lamp", "state": "good" }
 ```
 - Sent whenever the posture changes.
-- `state` is `"good"`, `"poor"` or `"off"`. `"off"` means no data.
-- The firmware should forward it to the BLE Lamp, for example green/amber/off.
+- `state` maps to the lamp colors:
+
+  | `state` | Lamp | Firmware state (`SitWell-Main.ino`) |
+  |---|---|---|
+  | `"good"` | White | `STATE_GOOD_POSTURE` (1) |
+  | `"slouching"` | Orange | `STATE_POSTURE_DEVIATION` (2) |
+  | `"poor"` | Red (+ buzzer) | `STATE_SLOUCHING` (3) |
+  | `"off"` | Off | `STATE_NOT_SITTING` (0), or no data |
+
+  ⚠️ The firmware's names don't match the app's: the firmware calls the
+  **red** state "SLOUCHING", while the app calls red **"Poor posture"** and
+  orange **"Slouching"**. Rename the firmware constants to avoid confusion.
+- The firmware should forward it to the BLE Lamp.
 
 ```json
 { "type": "command", "action": "lamp_reconnect" }
@@ -195,6 +206,22 @@ The dashboard shows exactly one reason at a time, checked in this order:
 3. `awaiting_data`: "Waiting for sensor data" (no `posture` message for 5 s)
 4. `not_seated`: "Waiting for you to sit down"
 5. `running`: the timer counts and posture is shown
+
+### Posture states (`PostureStatus`, FR-D1)
+
+While `running`, posture is one of three states, matching the lamp colors:
+
+| State | Rule | Lamp | UI color |
+|---|---|---|---|
+| **Good Posture** | Reading within the calibrated range | White | Green |
+| **Slouching** | Deviating for **less** than *Alert after* (Settings) | Orange | Orange |
+| **Poor Posture** | Deviating for *Alert after* **or longer** | Red | Red |
+
+When not running, posture is **No Data**. Good posture shows **green** on
+screen, because white wouldn't stand out on a white page.
+
+"Deviations" counts each time posture leaves Good. For time totals and the
+History charts, Slouching and Poor are both counted as **poor time**.
 
 ---
 
