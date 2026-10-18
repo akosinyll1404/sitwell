@@ -220,8 +220,11 @@ While `running`, posture is one of three states, matching the lamp colors:
 When not running, posture is **No Data**. Good posture shows **green** on
 screen, because white wouldn't stand out on a white page.
 
-"Deviations" counts each time posture leaves Good. For time totals and the
-History charts, Slouching and Poor are both counted as **poor time**.
+"Deviations" counts each time posture leaves Good. Time is tracked separately
+for all three states (`goodMs`, `slouchMs`, `poorMs`). The History charts use
+**green / orange / red** (`--color-chart-good/slouch/poor` in `index.css`).
+This palette was checked for color-blind separation; keep the text labels
+next to the colors.
 
 ---
 
@@ -251,16 +254,22 @@ or Tauri commands backed by `rusqlite`):
 | Method | Used by |
 |--------|---------|
 | `listSessions({ limit })` | Session History table, daily summary |
-| `getTimeline(dayStart)` | "Posture throughout the day" chart (30-min slots) |
+| `getTimeline(dayStart)` | "Posture throughout the day" chart (30-min slots) for the day being viewed |
+| `getDailyTotals(fromDay, toDay)` | "Last 7 Days" chart and the Daily Progress Summary for any day. One row per day with data: `SELECT date(start_time/1000, 'unixepoch', 'localtime') AS day, SUM(good_posture_seconds), SUM(slouch_posture_seconds), SUM(poor_posture_seconds), SUM(deviation_count), SUM(breaks_taken) FROM session WHERE … GROUP BY day` |
 | `saveSession(session)` | **Not called yet.** Call it periodically (e.g. every 30 s) and when a session ends, from `useMonitoring` |
+
+> ⚠️ `useHistory` adds the **live** session to today's totals. Once `saveSession()`
+> stores the active session, exclude it from repository results (or skip the
+> live merge) so today isn't counted twice.
 
 ### Proposed schema changes (vs. technical design §11)
 
 - **`session`:**
-  - add `deviation_count INTEGER` and `breaks_taken INTEGER`. The History
-    screen shows both.
+  - add `slouch_posture_seconds INTEGER`, `deviation_count INTEGER` and
+    `breaks_taken INTEGER`. The History screen shows all three.
+    `poor_posture_seconds` now means **poor only** (not slouching).
 - **New `timeline` table:** `(day_start INTEGER, slot_start INTEGER,
-  good_ms INTEGER, poor_ms INTEGER)`. This is cheaper for the chart than
+  good_ms INTEGER, slouch_ms INTEGER, poor_ms INTEGER)`. This is cheaper for the chart than
   aggregating raw `posture_record` rows.
 - **`settings` keys to add:**
   - `calibration_baseline` (JSON `{ basePitch, baseRoll, calibratedAt }`),

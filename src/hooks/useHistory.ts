@@ -1,75 +1,114 @@
 import { useEffect, useState } from "react";
-import { sampleSessions, sampleTimeline } from "../dev/sampleHistory";
+import { sampleDailyTotals, sampleSessions, sampleTimeline } from "../dev/sampleHistory";
 import { mergeTimelines } from "../lib/posture";
-import { startOfDay } from "../lib/time";
-import { historyRepository, type SessionRecord } from "../services/historyRepository";
+import { addDays, startOfDay } from "../lib/time";
+import {
+  historyRepository,
+  type DayTotals,
+  type SessionRecord,
+} from "../services/historyRepository";
 import type { MonitoringSnapshot, TimelineBucket } from "../types/monitoring";
 
-export interface DailySummary {
-  dayStart: number;
-  goodMs: number;
-  poorMs: number;
+export interface DailySummary extends DayTotals {
   totalMs: number;
-  deviations: number;
-  breaksTaken: number;
 }
 
 export interface HistoryData {
-  daily: DailySummary;
+  /** Local midnight today. */
+  today: number;
+  /** The last 7 days, oldest first (days without data have zero totals). */
+  week: DailySummary[];
+  /** Totals for the day being viewed in the Daily Progress Summary. */
+  selected: DailySummary;
+  /** Timeline slots for the day being viewed. */
   timeline: TimelineBucket[];
   sessions: SessionRecord[];
+}
+
+const WEEK_DAYS = 7;
+
+interface Stored {
+  sessions: SessionRecord[];
+  totals: DayTotals[];
+  timeline: TimelineBucket[];
+  /** Which day `timeline` belongs to (avoids showing a stale day while loading). */
+  timelineDay: number | null;
 }
 
 /**
  * Combines saved history (repository, or sample data in dev) with the live
  * session from this app run.
+ *
+ * NOTE for the database work: once saveSession() persists the *active*
+ * session, exclude it from the repository results (or skip the live merge
+ * below) so today isn't counted twice.
  */
-export function useHistory(snapshot: MonitoringSnapshot, useSampleData: boolean): HistoryData {
-  const dayStart = startOfDay(Date.now());
-  const [stored, setStored] = useState<{ sessions: SessionRecord[]; timeline: TimelineBucket[] }>({
+export function useHistory(
+  snapshot: MonitoringSnapshot,
+  useSampleData: boolean,
+  selectedDay: number,
+): HistoryData {
+  const today = startOfDay(Date.now());
+  const weekStart = addDays(today, -(WEEK_DAYS - 1));
+  const rangeStart = Math.min(weekStart, selectedDay);
+
+  const [stored, setStored] = useState<Stored>({
     sessions: [],
+    totals: [],
     timeline: [],
+    timelineDay: null,
   });
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const [sessions, timeline] = useSampleData
-        ? [sampleSessions(dayStart), sampleTimeline(dayStart)]
+      const [sessions, totals, timeline] = useSampleData
+        ? [sampleSessions(today), sampleDailyTotals(rangeStart, today), sampleTimeline(selectedDay)]
         : await Promise.all([
             historyRepository.listSessions({ limit: 20 }),
-            historyRepository.getTimeline(dayStart),
+            historyRepository.getDailyTotals(rangeStart, today),
+            historyRepository.getTimeline(selectedDay),
           ]);
-      if (!cancelled) setStored({ sessions, timeline });
+      if (!cancelled) setStored({ sessions, totals, timeline, timelineDay: selectedDay });
     };
     load().catch((error) => console.error("[history] Failed to load history", error));
     return () => {
       cancelled = true;
     };
-  }, [useSampleData, dayStart]);
+  }, [useSampleData, today, rangeStart, selectedDay]);
 
   const live = snapshot.session;
-  const todaysSessions = stored.sessions.filter((s) => s.startTime >= dayStart);
-  const goodMs = sum(todaysSessions, (s) => s.goodPostureSeconds * 1000) + live.goodMs;
-  const poorMs = sum(todaysSessions, (s) => s.poorPostureSeconds * 1000) + live.poorMs;
+
+  const totalsFor = (day: number): DailySummary => {
+    const saved = stored.totals.find((t) => t.dayStart === day);
+    const isToday = day === today;
+    const goodMs = (saved?.goodMs ?? 0) + (isToday ? live.goodMs : 0);
+    const slouchMs = (saved?.slouchMs ?? 0) + (isToday ? live.slouchMs : 0);
+    const poorMs = (saved?.poorMs ?? 0) + (isToday ? live.poorMs : 0);
+    return {
+      dayStart: day,
+      goodMs,
+      slouchMs,
+      poorMs,
+      totalMs: goodMs + slouchMs + poorMs,
+      deviations: (saved?.deviations ?? 0) + (isToday ? live.deviations : 0),
+      breaksTaken: (saved?.breaksTaken ?? 0) + (isToday ? live.breaksTaken : 0),
+    };
+  };
+
+  const week: DailySummary[] = [];
+  for (let i = 0; i < WEEK_DAYS; i++) week.push(totalsFor(addDays(weekStart, i)));
+
+  const savedTimeline = stored.timelineDay === selectedDay ? stored.timeline : [];
+  const liveTimeline = snapshot.timeline.filter(
+    (b) => b.start >= selectedDay && b.start < addDays(selectedDay, 1),
+  );
 
   return {
-    daily: {
-      dayStart,
-      goodMs,
-      poorMs,
-      totalMs: goodMs + poorMs,
-      deviations: sum(todaysSessions, (s) => s.deviationCount) + live.deviations,
-      breaksTaken: sum(todaysSessions, (s) => s.breaksTaken) + live.breaksTaken,
-    },
-    timeline: mergeTimelines(
-      stored.timeline,
-      snapshot.timeline.filter((b) => b.start >= dayStart),
-    ),
+    today,
+    week,
+    selected: totalsFor(selectedDay),
+    timeline: mergeTimelines(savedTimeline, liveTimeline),
     sessions: stored.sessions,
   };
-}
-
-function sum<T>(items: T[], pick: (item: T) => number): number {
-  return items.reduce((total, item) => total + pick(item), 0);
 }

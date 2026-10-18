@@ -1,11 +1,15 @@
+import { useState } from "react";
+import { DayPicker } from "../components/history/DayPicker";
 import { PostureDonut } from "../components/history/PostureDonut";
 import { SessionHistoryTable } from "../components/history/SessionHistoryTable";
 import { StatTile } from "../components/history/StatTile";
 import { TimelineBarChart } from "../components/history/TimelineBarChart";
+import { WeekTrendChart } from "../components/history/WeekTrendChart";
+import { splitPercent } from "../components/history/postureChart";
 import { Card } from "../components/ui/Card";
 import { PHASE_COPY, POSTURE_LABEL, TONE_PANEL, postureTone } from "../config/posture";
 import { useHistory } from "../hooks/useHistory";
-import { formatDate, formatDuration, formatHms, percent } from "../lib/time";
+import { formatDuration, formatHms, percent, startOfDay } from "../lib/time";
 import type { MonitoringSnapshot, PostureStatus } from "../types/monitoring";
 
 interface HistoryPageProps {
@@ -16,7 +20,10 @@ interface HistoryPageProps {
 
 /** Posture Status & History (FR-H1–H4). */
 export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
-  const { daily, timeline, sessions } = useHistory(snapshot, useSampleData);
+  const [selectedDay, setSelectedDay] = useState(() => startOfDay(Date.now()));
+  const { today, week, selected: daily, timeline, sessions } = useHistory(snapshot, useSampleData, selectedDay);
+  const viewingToday = selectedDay === today;
+  const dayPercents = splitPercent(daily);
   const { session, posture, phase } = snapshot;
   const running = phase === "running";
 
@@ -54,7 +61,7 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
             label="Deviations detected"
             info="Times your posture went from good to poor during this session."
             value={String(session.deviations)}
-            sub={`Total ${formatDuration(session.poorMs).replace("m", " min")}`}
+            sub={`Total ${formatDuration(session.slouchMs + session.poorMs).replace("m", " min")}`}
           />
           <StatTile
             className="col-span-2"
@@ -66,28 +73,52 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
         </div>
       </Card>
 
-      <Card title="Daily Progress Summary">
-        <p className="-mt-2 mb-3 text-sm text-muted">{formatDate(daily.dayStart)}</p>
-        <div className="grid grid-cols-2 gap-3">
+      <Card
+        title="Last 7 Days"
+        info="Good and poor posture time per day. Click a day to see its details below."
+      >
+        <WeekTrendChart days={week} today={today} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+      </Card>
+
+      <Card
+        title="Daily Progress Summary"
+        actions={<DayPicker day={selectedDay} today={today} onChange={setSelectedDay} />}
+      >
+        <div className="grid grid-cols-6 gap-3">
           <StatTile
+            className="col-span-2"
             label="Good posture"
+            swatch="bg-chart-good"
             value={formatDuration(daily.goodMs)}
-            sub={`${percent(daily.goodMs, daily.totalMs)}%`}
+            sub={`${dayPercents.goodMs}%`}
           />
           <StatTile
+            className="col-span-2"
+            label="Slouching"
+            swatch="bg-chart-slouch"
+            info="Out of your calibrated range for less than your 'Alert after' time (lamp: orange)."
+            value={formatDuration(daily.slouchMs)}
+            sub={`${dayPercents.slouchMs}%`}
+          />
+          <StatTile
+            className="col-span-2"
             label="Poor posture"
+            swatch="bg-chart-poor"
+            info="Slouching that lasted longer than your 'Alert after' time (lamp: red)."
             value={formatDuration(daily.poorMs)}
-            sub={`${daily.totalMs > 0 ? 100 - percent(daily.goodMs, daily.totalMs) : 0}%`}
+            sub={`${dayPercents.poorMs}%`}
           />
           <StatTile
+            className="col-span-3"
             label="Total monitored"
-            info="Sitting time recorded today while monitoring was running."
+            info="Sitting time recorded on this day while monitoring was running."
             value={formatDuration(daily.totalMs)}
             sub={`${daily.breaksTaken} ${daily.breaksTaken === 1 ? "break" : "breaks"} taken`}
           />
           <StatTile
+            className="col-span-3"
             label="Deviations"
-            info="Times your posture went from good to poor across all of today's sessions."
+            info="Times your posture went from good to poor across all sessions on this day."
             value={String(daily.deviations)}
           />
         </div>
@@ -95,9 +126,13 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
         <p className="mt-5 mb-2 text-sm text-slate-600">Posture throughout the day</p>
         <div className="flex items-end gap-8">
           <div className="min-w-0 flex-1">
-            <TimelineBarChart buckets={timeline} dayStart={daily.dayStart} />
+            <TimelineBarChart
+              buckets={timeline}
+              dayStart={daily.dayStart}
+              emptyText={viewingToday ? "No posture data recorded today yet." : "No posture data recorded on this day."}
+            />
           </div>
-          <PostureDonut goodMs={daily.goodMs} poorMs={daily.poorMs} />
+          <PostureDonut times={daily} />
         </div>
       </Card>
 

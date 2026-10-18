@@ -11,9 +11,22 @@ export interface SessionRecord {
   endTime: number | null;
   durationSeconds: number;
   goodPostureSeconds: number;
+  /** Proposed new column `slouch_posture_seconds`. */
+  slouchPostureSeconds: number;
   poorPostureSeconds: number;
   alertCount: number;
   deviationCount: number;
+  breaksTaken: number;
+}
+
+/** Totals for one calendar day (local time), summed over its sessions. */
+export interface DayTotals {
+  /** Local midnight of the day. */
+  dayStart: number;
+  goodMs: number;
+  slouchMs: number;
+  poorMs: number;
+  deviations: number;
   breaksTaken: number;
 }
 
@@ -21,8 +34,13 @@ export interface SessionRecord {
 export interface HistoryRepository {
   /** Most recent sessions first. */
   listSessions(options?: { limit?: number }): Promise<SessionRecord[]>;
-  /** Good/poor time per 30-minute slot for the day starting at `dayStart`. */
+  /** Good/slouching/poor time per 30-minute slot for the day starting at `dayStart`. */
   getTimeline(dayStart: number): Promise<TimelineBucket[]>;
+  /**
+   * Per-day totals for every day from `fromDay` to `toDay` (both local
+   * midnights, inclusive) that has data. Days without data are omitted.
+   */
+  getDailyTotals(fromDay: number, toDay: number): Promise<DayTotals[]>;
   /** Insert or update a session (call periodically and when a session ends). */
   saveSession(session: SessionRecord): Promise<void>;
 }
@@ -39,6 +57,9 @@ export const historyRepository: HistoryRepository = {
     return [];
   },
   async getTimeline() {
+    return [];
+  },
+  async getDailyTotals() {
     return [];
   },
   async saveSession() {
