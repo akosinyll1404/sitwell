@@ -28,6 +28,12 @@
   --color-slouch-fg: #c2410c;
   --color-slouch-accent: #f97316;
 
+  /* Chart colors for the 3 posture classes (validated for color-blind
+     separation; always shown with text labels). */
+  --color-chart-good: #15803d;
+  --color-chart-slouch: #f59e0b;
+  --color-chart-poor: #dc2626;
+
   /* Poor posture (lamp: red). */
   --color-bad-bg: #fdecec;
   --color-bad-fg: #b91c1c;

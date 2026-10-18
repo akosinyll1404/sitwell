@@ -5,19 +5,24 @@ interface CardProps {
   title?: string;
   /** Optional explanation shown in an ⓘ tooltip next to the title. */
   info?: string;
+  /** Controls shown on the right side of the title row. */
+  actions?: ReactNode;
   className?: string;
   children: ReactNode;
 }
 
 /** White rounded panel used for every dashboard section. */
-export function Card({ title, info, className = "", children }: CardProps) {
+export function Card({ title, info, actions, className = "", children }: CardProps) {
   return (
     <section className={`rounded-2xl border border-line bg-white p-5 ${className}`}>
-      {title && (
-        <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-ink">
-          {title}
-          {info && <InfoTip content={info} />}
-        </h2>
+      {(title || actions) && (
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-ink">
+            {title}
+            {info && <InfoTip content={info} />}
+          </h2>
+          {actions}
+        </div>
       )}
       {children}
     </section>
