@@ -2,14 +2,18 @@ import { PITCH_THRESHOLD_DEG, ROLL_THRESHOLD_DEG, TIMELINE_BUCKET_MS } from "../
 import type { CalibrationBaseline, TimelineBucket } from "../types/monitoring";
 import { startOfDay } from "./time";
 
-/** Classifies a reading against the user's baseline (FR-M2). */
+/**
+ * Compares one reading with the user's baseline (FR-M2). Whether a deviation
+ * counts as "slouching" or "poor" depends on how long it lasts, which
+ * useMonitoring tracks.
+ */
 export function classifyPosture(
   reading: { pitch: number; roll: number },
   baseline: CalibrationBaseline,
-): "good" | "poor" {
+): "good" | "deviated" {
   const pitchOff = Math.abs(reading.pitch - baseline.basePitch);
   const rollOff = Math.abs(reading.roll - baseline.baseRoll);
-  return pitchOff > PITCH_THRESHOLD_DEG || rollOff > ROLL_THRESHOLD_DEG ? "poor" : "good";
+  return pitchOff > PITCH_THRESHOLD_DEG || rollOff > ROLL_THRESHOLD_DEG ? "deviated" : "good";
 }
 
 /** Start of the timeline slot that contains `ts`. */
@@ -22,7 +26,7 @@ export function bucketStart(ts: number): number {
 export function addToTimeline(
   timeline: TimelineBucket[],
   ts: number,
-  status: "good" | "poor",
+  status: "good" | "deviated",
   ms: number,
 ): TimelineBucket[] {
   const start = bucketStart(ts);
@@ -31,7 +35,7 @@ export function addToTimeline(
   const updated = {
     ...bucket,
     goodMs: bucket.goodMs + (status === "good" ? ms : 0),
-    poorMs: bucket.poorMs + (status === "poor" ? ms : 0),
+    poorMs: bucket.poorMs + (status === "deviated" ? ms : 0),
   };
   if (index < 0) return [...timeline, updated];
   const copy = timeline.slice();

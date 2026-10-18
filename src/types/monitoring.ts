@@ -1,5 +1,11 @@
-/** Posture classification shown across the app. */
-export type PostureStatus = "good" | "poor" | "no_data";
+/**
+ * Posture state shown across the app (FR-D1). Matches the BLE Lamp colors:
+ * - good:      within the calibrated range          → white light
+ * - slouching: deviating, for less than "Alert after" → orange light
+ * - poor:      deviating for "Alert after" or longer  → red light
+ * - no_data:   not monitoring (offline, not seated, …) → lamp off
+ */
+export type PostureStatus = "good" | "slouching" | "poor" | "no_data";
 
 /** Lifecycle of a single connection (FR-D4). */
 export type ConnectionState = "connected" | "connecting" | "disconnected";

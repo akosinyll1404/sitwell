@@ -34,7 +34,7 @@ export function PostureDonut({ goodMs, poorMs }: PostureDonutProps) {
               cy="60"
               r="44"
               pathLength={100}
-              className="stroke-poor-accent"
+              className="stroke-warn-accent"
               strokeDasharray={`${poor - gap} ${100 - poor + gap}`}
               strokeDashoffset={-good}
             />
@@ -51,7 +51,7 @@ export function PostureDonut({ goodMs, poorMs }: PostureDonutProps) {
           Good {good}%
         </li>
         <li className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm bg-poor-accent" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-sm bg-warn-accent" aria-hidden />
           Poor {poor}%
         </li>
       </ul>

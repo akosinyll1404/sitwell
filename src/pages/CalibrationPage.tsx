@@ -156,7 +156,7 @@ function Stepper({ calibrated }: { calibrated: boolean }) {
 function DeviceBadge({ state, onConnect }: { state: ConnectionState; onConnect: () => void }) {
   const badge = {
     connected: { text: "Device connected", cls: "bg-good-bg text-good-fg" },
-    connecting: { text: "Connecting…", cls: "bg-poor-bg text-poor-fg" },
+    connecting: { text: "Connecting…", cls: "bg-warn-bg text-warn-fg" },
     disconnected: { text: "Device not connected", cls: "bg-white text-slate-600 border border-line" },
   }[state];
 

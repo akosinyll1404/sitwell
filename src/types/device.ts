@@ -40,7 +40,8 @@ export type DeviceMessage = StatusMessage | PostureMessage;
 
 /* ---------- App → Device ---------- */
 
-export type LampState = "good" | "poor" | "off";
+/** Lamp colors: good = white, slouching = orange, poor = red, off = no data. */
+export type LampState = "good" | "slouching" | "poor" | "off";
 
 export type AppCommand =
   /** Ask the ESP32-C3 to re-establish its BLE link to the lamp. */

@@ -39,7 +39,9 @@ interface State {
   deviceInfo: DeviceInfo | null;
   calibration: CalibrationBaseline | null;
   lastReading: PostureReading | null;
-  lastPosture: "good" | "poor" | null;
+  lastPosture: "good" | "deviated" | null;
+  /** When the current deviation started (null while in range). */
+  deviatedSince: number | null;
   session: SessionStats;
   timeline: TimelineBucket[];
   /** session.elapsedMs at the last break (or reschedule). */
@@ -73,6 +75,7 @@ function initialState(): State {
     calibration: null,
     lastReading: null,
     lastPosture: null,
+    deviatedSince: null,
     session: EMPTY_SESSION,
     timeline: [],
     breakAnchorMs: 0,
@@ -90,6 +93,7 @@ function reducer(state: State, action: Action): State {
         // Never credit time across a disconnect.
         lastReading: connected ? state.lastReading : null,
         lastPosture: connected ? state.lastPosture : null,
+        deviatedSince: connected ? state.deviatedSince : null,
         lampConnected: connected ? state.lampConnected : false,
         lampReconnecting: false,
       };
@@ -108,7 +112,7 @@ function reducer(state: State, action: Action): State {
     case "posture":
       return applyPosture(state, action.message, action.at);
     case "calibrated":
-      return { ...state, calibration: action.baseline, lastPosture: null };
+      return { ...state, calibration: action.baseline, lastPosture: null, deviatedSince: null };
     case "lampReconnecting":
       return { ...state, lampReconnecting: action.active };
     case "rescheduleBreak":
@@ -130,7 +134,7 @@ function applyPosture(state: State, message: PostureMessage, at: number): State 
         startedAt: session.startedAt ?? prev.at,
         elapsedMs: session.elapsedMs + dt,
         goodMs: session.goodMs + (status === "good" ? dt : 0),
-        poorMs: session.poorMs + (status === "poor" ? dt : 0),
+        poorMs: session.poorMs + (status === "deviated" ? dt : 0),
       };
       timeline = addToTimeline(timeline, prev.at, status, dt);
     }
@@ -138,7 +142,7 @@ function applyPosture(state: State, message: PostureMessage, at: number): State 
 
   const current =
     state.calibration && message.seated ? classifyPosture(message, state.calibration) : null;
-  if (current === "poor" && state.lastPosture !== "poor") {
+  if (current === "deviated" && state.lastPosture !== "deviated") {
     session = { ...session, deviations: session.deviations + 1 };
   }
 
@@ -160,6 +164,7 @@ function applyPosture(state: State, message: PostureMessage, at: number): State 
     breakAnchorMs,
     notSeatedSince,
     lastPosture: current,
+    deviatedSince: current === "deviated" ? (state.deviatedSince ?? at) : null,
     lastReading: { pitch: message.pitch, roll: message.roll, seated: message.seated, at },
   };
 }
@@ -173,13 +178,25 @@ function derivePhase(state: State, now: number): MonitoringPhase {
   return "running";
 }
 
-function deriveSnapshot(state: State, now: number, breakIntervalMs: number): MonitoringSnapshot {
+function deriveSnapshot(
+  state: State,
+  now: number,
+  breakIntervalMs: number,
+  alertDelayMs: number,
+): MonitoringSnapshot {
   const phase = derivePhase(state, now);
   let posture: PostureStatus = "no_data";
   let session = state.session;
 
   if (phase === "running" && state.lastReading && state.calibration) {
-    posture = classifyPosture(state.lastReading, state.calibration);
+    const deviated = classifyPosture(state.lastReading, state.calibration) === "deviated";
+    // A deviation is "slouching" at first and becomes "poor" once it lasts
+    // longer than the "Alert after" setting.
+    posture = !deviated
+      ? "good"
+      : state.deviatedSince !== null && now - state.deviatedSince >= alertDelayMs
+        ? "poor"
+        : "slouching";
     // Extend the session smoothly between samples.
     const live = Math.min(Math.max(now - state.lastReading.at, 0), MAX_SAMPLE_GAP_MS);
     session = {
@@ -187,7 +204,7 @@ function deriveSnapshot(state: State, now: number, breakIntervalMs: number): Mon
       startedAt: session.startedAt ?? state.lastReading.at,
       elapsedMs: session.elapsedMs + live,
       goodMs: session.goodMs + (posture === "good" ? live : 0),
-      poorMs: session.poorMs + (posture === "poor" ? live : 0),
+      poorMs: session.poorMs + (posture !== "good" ? live : 0),
     };
   }
 
@@ -225,9 +242,11 @@ export interface MonitoringActions {
 export interface MonitoringOptions {
   /** Break reminder interval (from Settings). */
   breakIntervalMs: number;
+  /** How long slouching lasts before it counts as poor posture ("Alert after"). */
+  alertDelayMs: number;
 }
 
-export function useMonitoring({ breakIntervalMs }: MonitoringOptions): [MonitoringSnapshot, MonitoringActions] {
+export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptions): [MonitoringSnapshot, MonitoringActions] {
   const now = useNow(1000);
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
 
@@ -246,7 +265,7 @@ export function useMonitoring({ breakIntervalMs }: MonitoringOptions): [Monitori
     };
   }, []);
 
-  const snapshot = deriveSnapshot(state, now, breakIntervalMs);
+  const snapshot = deriveSnapshot(state, now, breakIntervalMs, alertDelayMs);
   const snapshotRef = useRef(snapshot);
   useEffect(() => {
     snapshotRef.current = snapshot;

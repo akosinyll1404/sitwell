@@ -23,6 +23,7 @@ function App() {
   // Lives at the top level so monitoring keeps running across screens.
   const [snapshot, actions] = useMonitoring({
     breakIntervalMs: settings.breakIntervalMinutes * 60_000,
+    alertDelayMs: settings.alertDelaySeconds * 1000,
   });
 
   // Try to reach the device on startup. In phase 1 this times out → offline.

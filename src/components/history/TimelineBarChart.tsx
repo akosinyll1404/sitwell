@@ -63,7 +63,7 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
             >
               {slot.poorMs > 0 && (
                 <div
-                  className={`rounded-t-[4px] bg-poor-accent ${slot.goodMs > 0 ? "mb-[2px]" : ""}`}
+                  className={`rounded-t-[4px] bg-warn-accent ${slot.goodMs > 0 ? "mb-[2px]" : ""}`}
                   style={{ height: `${poorPct}%` }}
                 />
               )}
