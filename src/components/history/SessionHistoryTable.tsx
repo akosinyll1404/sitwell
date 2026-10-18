@@ -8,6 +8,8 @@ interface SessionHistoryTableProps {
   /** The session from this app run, shown first while it has data. */
   live: SessionStats;
   liveRunning: boolean;
+  /** Show the live session row (only on the first page). */
+  showLive: boolean;
 }
 
 interface Row {
@@ -20,7 +22,7 @@ interface Row {
 }
 
 /** Past sessions with date, duration, and posture summary (FR-H2). */
-export function SessionHistoryTable({ sessions, live, liveRunning }: SessionHistoryTableProps) {
+export function SessionHistoryTable({ sessions, live, liveRunning, showLive }: SessionHistoryTableProps) {
   const rows: Row[] = sessions.map((s) => ({
     key: String(s.id),
     startTime: s.startTime,
@@ -33,7 +35,7 @@ export function SessionHistoryTable({ sessions, live, liveRunning }: SessionHist
     deviations: s.deviationCount,
     live: false,
   }));
-  if (live.startedAt !== null) {
+  if (showLive && live.startedAt !== null) {
     rows.unshift({
       key: "live",
       startTime: live.startedAt,

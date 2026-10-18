@@ -30,10 +30,20 @@ export interface DayTotals {
   breaksTaken: number;
 }
 
+/** One page of sessions plus the total count (for pagination). */
+export interface SessionPage {
+  sessions: SessionRecord[];
+  /** Total number of saved sessions across all pages. */
+  total: number;
+}
+
 /** Storage interface the History screen reads from. */
 export interface HistoryRepository {
-  /** Most recent sessions first. */
-  listSessions(options?: { limit?: number }): Promise<SessionRecord[]>;
+  /**
+   * One page of sessions, most recent first. Load only the requested page
+   * (SQL `LIMIT ? OFFSET ?`) so long histories stay fast.
+   */
+  listSessions(options: { limit: number; offset: number }): Promise<SessionPage>;
   /** Good/slouching/poor time per 30-minute slot for the day starting at `dayStart`. */
   getTimeline(dayStart: number): Promise<TimelineBucket[]>;
   /**
@@ -54,7 +64,7 @@ export interface HistoryRepository {
  */
 export const historyRepository: HistoryRepository = {
   async listSessions() {
-    return [];
+    return { sessions: [], total: 0 };
   },
   async getTimeline() {
     return [];
