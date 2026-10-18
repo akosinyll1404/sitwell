@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DayPicker } from "../components/history/DayPicker";
 import { PostureDonut } from "../components/history/PostureDonut";
 import { SessionHistoryTable } from "../components/history/SessionHistoryTable";
@@ -7,8 +7,10 @@ import { TimelineBarChart } from "../components/history/TimelineBarChart";
 import { WeekTrendChart } from "../components/history/WeekTrendChart";
 import { splitPercent } from "../components/history/postureChart";
 import { Card } from "../components/ui/Card";
+import { Pagination } from "../components/ui/Pagination";
 import { PHASE_COPY, POSTURE_LABEL, TONE_PANEL, postureTone } from "../config/posture";
 import { useHistory } from "../hooks/useHistory";
+import { useSessionPage } from "../hooks/useSessionPage";
 import { formatDuration, formatHms, percent, startOfDay } from "../lib/time";
 import type { MonitoringSnapshot, PostureStatus } from "../types/monitoring";
 
@@ -21,8 +23,20 @@ interface HistoryPageProps {
 /** Posture Status & History (FR-H1–H4). */
 export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(Date.now()));
-  const { today, week, selected: daily, timeline, sessions } = useHistory(snapshot, useSampleData, selectedDay);
+  const { today, week, selected: daily, timeline } = useHistory(snapshot, useSampleData, selectedDay);
   const viewingToday = selectedDay === today;
+
+  // Session History pagination.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const { sessions, total } = useSessionPage(useSampleData, page, pageSize);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // Back to page 1 when the data source changes.
+  useEffect(() => setPage(1), [useSampleData]);
+  // Stay within range if the number of sessions shrinks.
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
   const dayPercents = splitPercent(daily);
   const { session, posture, phase } = snapshot;
   const running = phase === "running";
@@ -137,7 +151,20 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
       </Card>
 
       <Card title="Session History">
-        <SessionHistoryTable sessions={sessions} live={session} liveRunning={running} />
+        <SessionHistoryTable sessions={sessions} live={session} liveRunning={running} showLive={page === 1} />
+        {total > 0 && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            itemLabel="sessions"
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+          />
+        )}
       </Card>
     </div>
   );

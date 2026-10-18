@@ -4,6 +4,20 @@
 
 ### Added
 
+- **Pagination for Session History**:
+  - 5 sessions per page by default, with a rows-per-page choice of 5, 10, 20 or 50.
+  - "Showing 6–10 of 58 sessions", plus Previous / page numbers / Next controls
+    (`1 … 4 5 6 … 12` once there are many pages).
+  - The live session is pinned to the top of page 1.
+- `historyRepository.listSessions({ limit, offset })` now returns one page plus
+  the total count (`{ sessions, total }`), so the database only loads the rows
+  being shown.
+- Sample history data now covers 30 days, so pagination can be previewed.
+
+## Phase 1.3: History by day (2026-10-18)
+
+### Added
+
 - **History by day** (FR-H3, FR-H4, technical design §6.2 "trends across days"):
   - **Last 7 Days** chart above the Daily Progress Summary: one bar per day
     (good vs poor time) with that day's good-posture %. Click a day to view it.
