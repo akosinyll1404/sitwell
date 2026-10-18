@@ -22,20 +22,23 @@ export function bucketStart(ts: number): number {
   return day + Math.floor((ts - day) / TIMELINE_BUCKET_MS) * TIMELINE_BUCKET_MS;
 }
 
+export type TimeClass = "good" | "slouching" | "poor";
+
 /** Returns a new timeline with `ms` of `status` time added at `ts`. */
 export function addToTimeline(
   timeline: TimelineBucket[],
   ts: number,
-  status: "good" | "deviated",
+  status: TimeClass,
   ms: number,
 ): TimelineBucket[] {
   const start = bucketStart(ts);
   const index = timeline.findIndex((b) => b.start === start);
-  const bucket = index >= 0 ? timeline[index] : { start, goodMs: 0, poorMs: 0 };
+  const bucket = index >= 0 ? timeline[index] : { start, goodMs: 0, slouchMs: 0, poorMs: 0 };
   const updated = {
     ...bucket,
     goodMs: bucket.goodMs + (status === "good" ? ms : 0),
-    poorMs: bucket.poorMs + (status === "deviated" ? ms : 0),
+    slouchMs: bucket.slouchMs + (status === "slouching" ? ms : 0),
+    poorMs: bucket.poorMs + (status === "poor" ? ms : 0),
   };
   if (index < 0) return [...timeline, updated];
   const copy = timeline.slice();
@@ -51,7 +54,12 @@ export function mergeTimelines(a: TimelineBucket[], b: TimelineBucket[]): Timeli
     byStart.set(
       bucket.start,
       existing
-        ? { ...existing, goodMs: existing.goodMs + bucket.goodMs, poorMs: existing.poorMs + bucket.poorMs }
+        ? {
+            ...existing,
+            goodMs: existing.goodMs + bucket.goodMs,
+            slouchMs: existing.slouchMs + bucket.slouchMs,
+            poorMs: existing.poorMs + bucket.poorMs,
+          }
         : bucket,
     );
   }

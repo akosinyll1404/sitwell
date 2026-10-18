@@ -5,7 +5,7 @@ import {
   MAX_SAMPLE_GAP_MS,
   STALE_DATA_MS,
 } from "../config/monitoring";
-import { addToTimeline, classifyPosture } from "../lib/posture";
+import { addToTimeline, classifyPosture, type TimeClass } from "../lib/posture";
 import { deviceConnection } from "../services/deviceConnection";
 import type { PostureMessage, StatusMessage } from "../types/device";
 import type {
@@ -52,7 +52,7 @@ interface State {
 type Action =
   | { type: "link"; state: ConnectionState }
   | { type: "status"; message: StatusMessage }
-  | { type: "posture"; message: PostureMessage; at: number }
+  | { type: "posture"; message: PostureMessage; at: number; alertDelayMs: number }
   | { type: "calibrated"; baseline: CalibrationBaseline }
   | { type: "lampReconnecting"; active: boolean }
   | { type: "rescheduleBreak"; elapsedMs: number };
@@ -61,6 +61,7 @@ const EMPTY_SESSION: SessionStats = {
   startedAt: null,
   elapsedMs: 0,
   goodMs: 0,
+  slouchMs: 0,
   poorMs: 0,
   deviations: 0,
   breaksTaken: 0,
@@ -110,7 +111,7 @@ function reducer(state: State, action: Action): State {
         lampReconnecting: action.message.lampConnected ? false : state.lampReconnecting,
       };
     case "posture":
-      return applyPosture(state, action.message, action.at);
+      return applyPosture(state, action.message, action.at, action.alertDelayMs);
     case "calibrated":
       return { ...state, calibration: action.baseline, lastPosture: null, deviatedSince: null };
     case "lampReconnecting":
@@ -120,7 +121,7 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-function applyPosture(state: State, message: PostureMessage, at: number): State {
+function applyPosture(state: State, message: PostureMessage, at: number, alertDelayMs: number): State {
   const prev = state.lastReading;
   let { session, timeline, breakAnchorMs, notSeatedSince } = state;
 
@@ -128,13 +129,14 @@ function applyPosture(state: State, message: PostureMessage, at: number): State 
   if (prev && prev.seated && state.calibration && state.link === "connected") {
     const dt = Math.min(Math.max(at - prev.at, 0), MAX_SAMPLE_GAP_MS);
     if (dt > 0) {
-      const status = classifyPosture(prev, state.calibration);
+      const status = timeClassAt(prev, state, alertDelayMs);
       session = {
         ...session,
         startedAt: session.startedAt ?? prev.at,
         elapsedMs: session.elapsedMs + dt,
         goodMs: session.goodMs + (status === "good" ? dt : 0),
-        poorMs: session.poorMs + (status === "deviated" ? dt : 0),
+        slouchMs: session.slouchMs + (status === "slouching" ? dt : 0),
+        poorMs: session.poorMs + (status === "poor" ? dt : 0),
       };
       timeline = addToTimeline(timeline, prev.at, status, dt);
     }
@@ -167,6 +169,17 @@ function applyPosture(state: State, message: PostureMessage, at: number): State 
     deviatedSince: current === "deviated" ? (state.deviatedSince ?? at) : null,
     lastReading: { pitch: message.pitch, roll: message.roll, seated: message.seated, at },
   };
+}
+
+/**
+ * Which class a reading's time belongs to: slouching until the deviation has
+ * lasted `alertDelayMs`, poor after that.
+ */
+function timeClassAt(reading: PostureReading, state: State, alertDelayMs: number): TimeClass {
+  if (!state.calibration || classifyPosture(reading, state.calibration) === "good") return "good";
+  return state.deviatedSince !== null && reading.at - state.deviatedSince >= alertDelayMs
+    ? "poor"
+    : "slouching";
 }
 
 function derivePhase(state: State, now: number): MonitoringPhase {
@@ -204,7 +217,8 @@ function deriveSnapshot(
       startedAt: session.startedAt ?? state.lastReading.at,
       elapsedMs: session.elapsedMs + live,
       goodMs: session.goodMs + (posture === "good" ? live : 0),
-      poorMs: session.poorMs + (posture !== "good" ? live : 0),
+      slouchMs: session.slouchMs + (posture === "slouching" ? live : 0),
+      poorMs: session.poorMs + (posture === "poor" ? live : 0),
     };
   }
 
@@ -249,6 +263,11 @@ export interface MonitoringOptions {
 export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptions): [MonitoringSnapshot, MonitoringActions] {
   const now = useNow(1000);
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  // Read inside the device listener without resubscribing on every change.
+  const alertDelayRef = useRef(alertDelayMs);
+  useEffect(() => {
+    alertDelayRef.current = alertDelayMs;
+  }, [alertDelayMs]);
 
   useEffect(() => {
     const offLink = deviceConnection.onLinkStateChange((linkState) =>
@@ -256,7 +275,7 @@ export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptio
     );
     const offMessage = deviceConnection.onMessage((message, at) => {
       if (message.type === "status") dispatch({ type: "status", message });
-      else dispatch({ type: "posture", message, at });
+      else dispatch({ type: "posture", message, at, alertDelayMs: alertDelayRef.current });
     });
     dispatch({ type: "link", state: deviceConnection.getLinkState() });
     return () => {

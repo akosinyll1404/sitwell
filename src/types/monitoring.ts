@@ -46,16 +46,18 @@ export interface SessionStats {
   startedAt: number | null;
   elapsedMs: number;
   goodMs: number;
+  slouchMs: number;
   poorMs: number;
   /** Number of times posture went from good to poor. */
   deviations: number;
   breaksTaken: number;
 }
 
-/** Good/poor time within one fixed time slot of the day. */
+/** Good/slouching/poor time within one fixed time slot of the day. */
 export interface TimelineBucket {
   start: number;
   goodMs: number;
+  slouchMs: number;
   poorMs: number;
 }
 

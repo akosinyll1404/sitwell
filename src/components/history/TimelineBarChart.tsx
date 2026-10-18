@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TIMELINE_BUCKET_MS } from "../../config/monitoring";
 import { formatClock, formatDuration } from "../../lib/time";
 import type { TimelineBucket } from "../../types/monitoring";
+import { StackedBar, totalOf } from "./postureChart";
 
 const HOUR = 3_600_000;
 const DEFAULT_START_HOUR = 8;
@@ -10,13 +11,20 @@ const DEFAULT_END_HOUR = 20;
 interface TimelineBarChartProps {
   buckets: TimelineBucket[];
   dayStart: number;
+  /** Message shown when the day has no data. */
+  emptyText?: string;
 }
 
 /**
  * "Posture throughout the day": one stacked bar per 30-minute slot. Bar
- * height is how much of the slot was monitored; green = good, amber = poor.
+ * height is how much of the slot was monitored; green = good, orange =
+ * slouching, red = poor.
  */
-export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
+export function TimelineBarChart({
+  buckets,
+  dayStart,
+  emptyText = "No posture data recorded on this day.",
+}: TimelineBarChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   // 8 AM–8 PM by default, widened to include any recorded slot.
@@ -31,9 +39,9 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
   const byStart = new Map(buckets.map((b) => [b.start, b]));
   const slots: TimelineBucket[] = [];
   for (let t = dayStart + startHour * HOUR; t < dayStart + endHour * HOUR; t += TIMELINE_BUCKET_MS) {
-    slots.push(byStart.get(t) ?? { start: t, goodMs: 0, poorMs: 0 });
+    slots.push(byStart.get(t) ?? { start: t, goodMs: 0, slouchMs: 0, poorMs: 0 });
   }
-  const hasData = slots.some((s) => s.goodMs + s.poorMs > 0);
+  const hasData = slots.some((s) => totalOf(s) > 0);
 
   const labels: { hour: number; pct: number }[] = [];
   for (let h = startHour; h <= endHour; h += 4) {
@@ -44,10 +52,8 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
     <div>
       <div className="relative flex h-40 items-end gap-1.5 border-b border-line">
         {slots.map((slot, i) => {
-          const total = slot.goodMs + slot.poorMs;
-          const filled = Math.min(1, total / TIMELINE_BUCKET_MS);
-          const goodPct = total > 0 ? filled * (slot.goodMs / total) * 100 : 0;
-          const poorPct = total > 0 ? filled * (slot.poorMs / total) * 100 : 0;
+          const total = totalOf(slot);
+          const breakdown = `Good ${formatDuration(slot.goodMs)} · Slouching ${formatDuration(slot.slouchMs)} · Poor ${formatDuration(slot.poorMs)}`;
           const label = `${formatClock(slot.start)} – ${formatClock(slot.start + TIMELINE_BUCKET_MS)}`;
 
           return (
@@ -55,25 +61,14 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
               key={slot.start}
               className="relative flex h-full flex-1 flex-col justify-end outline-none focus-visible:ring-2 focus-visible:ring-brand"
               tabIndex={total > 0 ? 0 : -1}
-              aria-label={`${label}: good ${formatDuration(slot.goodMs)}, poor ${formatDuration(slot.poorMs)}`}
+              aria-label={`${label}: ${breakdown}`}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
               onFocus={() => setHovered(i)}
               onBlur={() => setHovered(null)}
             >
-              {slot.poorMs > 0 && (
-                <div
-                  className={`rounded-t-[4px] bg-warn-accent ${slot.goodMs > 0 ? "mb-[2px]" : ""}`}
-                  style={{ height: `${poorPct}%` }}
-                />
-              )}
-              {slot.goodMs > 0 && (
-                <div
-                  className={`bg-good-accent ${slot.poorMs > 0 ? "" : "rounded-t-[4px]"}`}
-                  style={{ height: `${goodPct}%` }}
-                />
-              )}
-              {total === 0 && <div className="h-1 rounded-t-[2px] bg-idle-bg" />}
+              {/* Height = share of the 30-minute slot that was monitored. */}
+              <StackedBar times={slot} scaleMs={Math.max(TIMELINE_BUCKET_MS, total)} />
 
               {hovered === i && total > 0 && (
                 <div
@@ -82,9 +77,7 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
                   }`}
                 >
                   <p className="font-semibold">{label}</p>
-                  <p>
-                    Good {formatDuration(slot.goodMs)} · Poor {formatDuration(slot.poorMs)}
-                  </p>
+                  <p>{breakdown}</p>
                 </div>
               )}
             </div>
@@ -93,7 +86,7 @@ export function TimelineBarChart({ buckets, dayStart }: TimelineBarChartProps) {
 
         {!hasData && (
           <p className="absolute inset-0 flex items-center justify-center text-sm text-muted">
-            No posture data recorded today yet.
+            {emptyText}
           </p>
         )}
       </div>

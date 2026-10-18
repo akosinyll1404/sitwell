@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Added
+
+- **History by day** (FR-H3, FR-H4, technical design §6.2 "trends across days"):
+  - **Last 7 Days** chart above the Daily Progress Summary: one bar per day
+    (good vs poor time) with that day's good-posture %. Click a day to view it.
+  - **Day picker** on the Daily Progress Summary: ‹ / › arrows, a calendar,
+    and a **Today** button. The tiles, the "Posture throughout the day" chart and
+    the donut all follow the selected day.
+- **History colors follow the 3 posture classes:** Good (green), Slouching
+  (orange) and Poor (red), matching the lamp.
+  - Used in the Last 7 Days chart, "Posture throughout the day", the donut, and
+    a new 3-color bar in the Session History table.
+  - The Daily Progress Summary now has separate **Good posture / Slouching /
+    Poor posture** tiles, each with a color swatch.
+  - The palette was checked for color-blind separation.
+  - Slouching and poor time are now tracked separately (`slouchMs`) in the
+    session, timeline, daily totals and session records.
+- `historyRepository.getDailyTotals(fromDay, toDay)` for per-day totals, plus a
+  phase-1 stub.
+- Sample history data now covers a full week (with one empty "rest day").
+
+## Phase 1.2: Dashboard polish and posture states (2026-10-18)
+
 ### Changed
 
 - **Posture now has 3 states, matching the BLE Lamp colors (FR-D1):**

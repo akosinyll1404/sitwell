@@ -1,60 +1,49 @@
-import { percent } from "../../lib/time";
+import { POSTURE_CLASSES, ChartLegend, splitPercent, totalOf, type ClassTimes } from "./postureChart";
 
-interface PostureDonutProps {
-  goodMs: number;
-  poorMs: number;
-}
+/** Good / slouching / poor share of the day, with a labelled legend. */
+export function PostureDonut({ times }: { times: ClassTimes }) {
+  const total = totalOf(times);
+  const percents = splitPercent(times);
+  const present = POSTURE_CLASSES.filter(({ key }) => percents[key] > 0);
+  // 1-unit surface gap between arcs when more than one class is present.
+  const gap = present.length > 1 ? 1 : 0;
 
-/** Good vs. poor share of the day, with a labelled legend. */
-export function PostureDonut({ goodMs, poorMs }: PostureDonutProps) {
-  const total = goodMs + poorMs;
-  const good = percent(goodMs, total);
-  const poor = total > 0 ? 100 - good : 0;
-  // 1-unit surface gap between the two arcs when both are present.
-  const gap = good > 0 && poor > 0 ? 1 : 0;
+  let offset = 0;
+  const arcs = present.map(({ key, stroke }) => {
+    const arc = { key, stroke, length: percents[key], offset };
+    offset += percents[key];
+    return arc;
+  });
+
+  const label =
+    total > 0
+      ? `${percents.goodMs}% good, ${percents.slouchMs}% slouching, ${percents.poorMs}% poor posture`
+      : "No posture data";
 
   return (
     <div className="flex items-center gap-4">
-      <svg viewBox="0 0 120 120" className="h-32 w-32 shrink-0" role="img" aria-label={total > 0 ? `${good}% good posture, ${poor}% poor posture` : "No posture data"}>
+      <svg viewBox="0 0 120 120" className="h-32 w-32 shrink-0" role="img" aria-label={label}>
         <g transform="rotate(-90 60 60)" fill="none" strokeWidth="16">
           <circle cx="60" cy="60" r="44" className="stroke-idle-bg" />
-          {good > 0 && (
+          {arcs.map(({ key, stroke, length, offset: start }) => (
             <circle
+              key={key}
               cx="60"
               cy="60"
               r="44"
               pathLength={100}
-              className="stroke-good-accent"
-              strokeDasharray={`${good - gap} ${100 - good + gap}`}
+              className={stroke}
+              strokeDasharray={`${Math.max(length - gap, 0.5)} ${100 - length + gap}`}
+              strokeDashoffset={-start}
             />
-          )}
-          {poor > 0 && (
-            <circle
-              cx="60"
-              cy="60"
-              r="44"
-              pathLength={100}
-              className="stroke-warn-accent"
-              strokeDasharray={`${poor - gap} ${100 - poor + gap}`}
-              strokeDashoffset={-good}
-            />
-          )}
+          ))}
         </g>
         <text x="60" y="60" textAnchor="middle" dominantBaseline="central" className="fill-ink text-[22px] font-bold">
-          {total > 0 ? `${good}%` : "—"}
+          {total > 0 ? `${percents.goodMs}%` : "—"}
         </text>
       </svg>
 
-      <ul className="space-y-1 text-sm text-slate-600">
-        <li className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm bg-good-accent" aria-hidden />
-          Good {good}%
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm bg-warn-accent" aria-hidden />
-          Poor {poor}%
-        </li>
-      </ul>
+      <ChartLegend percents={percents} vertical />
     </div>
   );
 }
