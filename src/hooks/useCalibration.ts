@@ -1,121 +1,69 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  CALIBRATION_MAX_STD_DEG,
-  CALIBRATION_SAMPLES,
-  CALIBRATION_TIMEOUT_MS,
-} from "../config/monitoring";
 import { deviceConnection } from "../services/deviceConnection";
 import type { CalibrationBaseline } from "../types/monitoring";
-
 export type CalibrationStatus = "idle" | "collecting" | "success" | "failed";
-
 export interface CalibrationProgress {
-  status: CalibrationStatus;
-  collected: number;
-  required: number;
+  status: CalibrationStatus; collected: number; required: number;
   latest: { pitch: number; roll: number } | null;
-  /** Hint or failure reason to show the user. */
-  message: string | null;
-  baseline: CalibrationBaseline | null;
+  message: string | null; baseline: CalibrationBaseline | null;
 }
-
-const INITIAL: CalibrationProgress = {
-  status: "idle",
-  collected: 0,
-  required: CALIBRATION_SAMPLES,
-  latest: null,
-  message: null,
-  baseline: null,
-};
-
-/**
- * Collects baseline readings while the user holds a good posture (FR-C1–C4).
- * The baseline is the average pitch/roll; calibration fails if readings are
- * too unsteady, too few arrive in time, or the device disconnects.
- */
-export function useCalibration(
-  onComplete: (baseline: CalibrationBaseline) => void,
-): [CalibrationProgress, () => void] {
-  const [progress, setProgress] = useState<CalibrationProgress>(INITIAL);
-  const onCompleteRef = useRef(onComplete);
+const INITIAL: CalibrationProgress = { status: "idle", collected: 0, required: 20000, latest: null, message: null, baseline: null };
+export function useCalibration(onComplete: (baseline: CalibrationBaseline) => void): [CalibrationProgress, () => void, () => void] {
+  const [progress, setProgress] = useState(INITIAL);
+  const callback = useRef(onComplete);
+  callback.current = onComplete;
+  const active = useRef(false);
+  const observed = useRef(false);
+  const startedAt = useRef(0);
   useEffect(() => {
-    onCompleteRef.current = onComplete;
-  });
-
-  useEffect(() => {
-    if (progress.status !== "collecting") return;
-
-    const samples: { pitch: number; roll: number }[] = [];
-    let done = false;
-    const fail = (message: string) => {
-      if (done) return;
-      done = true;
-      setProgress((p) => ({ ...p, status: "failed", message }));
-    };
-
-    const timeout = window.setTimeout(
-      () => fail("Not enough readings arrived from the SitWell device. Check the connection and try again."),
-      CALIBRATION_TIMEOUT_MS,
-    );
-    const offLink = deviceConnection.onLinkStateChange((state) => {
-      if (state !== "connected") fail("The SitWell device disconnected during calibration.");
+    const off = deviceConnection.onFirmware(d => {
+      if (!active.current) return;
+      if (d.calibrating) observed.current = true;
+      if (!observed.current && !d.calibrating) return;
+      if (d.calibrating) {
+        setProgress({ ...INITIAL, status: "collecting", collected: Math.min(d.elapsed_ms, d.duration_ms), required: d.duration_ms,
+          message: `Hold neutral posture: ${(d.elapsed_ms / 1000).toFixed(1)} / ${d.duration_ms / 1000} seconds (${d.samples} samples).` });
+      } else {
+        active.current = false;
+        if (d.calibrated && d.message === "Calibration saved successfully") {
+          const baseline = { basePitch: 0, baseRoll: 0, calibratedAt: Date.now(),
+            sensors: { seat: d.ref_seat, back: d.ref_back, neck: d.ref_neck } };
+          setProgress({ ...INITIAL, status: "success", collected: d.duration_ms, required: d.duration_ms, baseline, message: d.message });
+          callback.current(baseline);
+        } else setProgress({ ...INITIAL, status: "failed", message: d.message });
+      }
     });
-    const offMessage = deviceConnection.onMessage((message) => {
-      if (done || message.type !== "posture") return;
-      if (!message.seated) {
-        setProgress((p) => ({ ...p, message: "Sit down in your preferred posture to continue." }));
-        return;
+    const offLink = deviceConnection.onLinkStateChange(state => {
+      if (active.current && state !== "connected") {
+        active.current = false;
+        setProgress({ ...INITIAL, status: "failed", message: "Connection lost. Device calibration may continue; reconnect to check." });
       }
-
-      samples.push({ pitch: message.pitch, roll: message.roll });
-      const latest = { pitch: message.pitch, roll: message.roll };
-      if (samples.length < CALIBRATION_SAMPLES) {
-        setProgress((p) => ({ ...p, collected: samples.length, latest, message: null }));
-        return;
-      }
-
-      const pitch = meanAndStd(samples.map((s) => s.pitch));
-      const roll = meanAndStd(samples.map((s) => s.roll));
-      if (pitch.std > CALIBRATION_MAX_STD_DEG || roll.std > CALIBRATION_MAX_STD_DEG) {
-        fail("You moved too much while readings were collected. Hold still and try again.");
-        return;
-      }
-
-      done = true;
-      const baseline: CalibrationBaseline = {
-        basePitch: round1(pitch.mean),
-        baseRoll: round1(roll.mean),
-        calibratedAt: Date.now(),
-      };
-      setProgress((p) => ({ ...p, status: "success", collected: samples.length, latest, baseline, message: null }));
-      onCompleteRef.current(baseline);
     });
-
-    return () => {
-      done = true;
-      window.clearTimeout(timeout);
-      offLink();
-      offMessage();
-    };
-  }, [progress.status]);
-
-  const start = useCallback(() => {
-    if (deviceConnection.getLinkState() !== "connected") {
-      setProgress({ ...INITIAL, status: "failed", message: "Connect the SitWell device before calibrating." });
-      return;
-    }
-    setProgress({ ...INITIAL, status: "collecting" });
+    const timer = window.setInterval(() => {
+      if (active.current && Date.now() - startedAt.current > 40000) {
+        active.current = false;
+        setProgress({ ...INITIAL, status: "failed", message: "Calibration result timed out. Reconnect to check the device." });
+      }
+    }, 1000);
+    return () => { off(); offLink(); window.clearInterval(timer); };
   }, []);
-
-  return [progress, start];
-}
-
-function meanAndStd(values: number[]): { mean: number; std: number } {
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((a, v) => a + (v - mean) ** 2, 0) / values.length;
-  return { mean, std: Math.sqrt(variance) };
-}
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
+  const start = useCallback(() => {
+    if (active.current) return;
+    if (deviceConnection.getLinkState() !== "connected") {
+      setProgress({ ...INITIAL, status: "failed", message: "Connect to SitWell-Setup Wi-Fi and click Connect first." }); return;
+    }
+    active.current = true; observed.current = false; startedAt.current = Date.now();
+    setProgress({ ...INITIAL, status: "collecting", message: "Starting 20-second device calibration…" });
+    void deviceConnection.calibrate().catch(error => {
+      active.current = false;
+      setProgress({ ...INITIAL, status: "failed", message: String(error) });
+    });
+  }, []);
+  const cancel = useCallback(() => {
+    void deviceConnection.calibrate(true).then(() => {
+      active.current = false;
+      setProgress({ ...INITIAL, message: "Calibration cancelled; previous device baseline retained." });
+    }).catch(error => setProgress(p => ({ ...p, message: String(error) })));
+  }, []);
+  return [progress, start, cancel];
 }

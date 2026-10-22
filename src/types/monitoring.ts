@@ -29,12 +29,14 @@ export type MonitoringPhase =
   | "running";
 
 export interface CalibrationBaseline {
+  sensors?: { seat: number; back: number; neck: number };
   basePitch: number;
   baseRoll: number;
   calibratedAt: number;
 }
 
 export interface PostureReading {
+  firmwareState?: number;
   pitch: number;
   roll: number;
   seated: boolean;

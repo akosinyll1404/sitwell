@@ -1,4 +1,5 @@
-import { CONNECT_TIMEOUT_MS } from "../config/monitoring";
+import { invoke } from "@tauri-apps/api/core";
+import type { FirmwareStatus } from "../types/firmware";
 import type { AppCommand, DeviceMessage } from "../types/device";
 import type { ConnectionState } from "../types/monitoring";
 import { parseDeviceMessage } from "./protocol";
@@ -7,20 +8,23 @@ type MessageListener = (message: DeviceMessage, receivedAt: number) => void;
 type LinkListener = (state: ConnectionState) => void;
 type CommandListener = (command: AppCommand) => void;
 
-/**
- * Single entry point for the App ↔ ESP32-C3 link.
- *
- * PHASE 1: there is no transport yet, so `connect()` times out and the app
- * stays offline. To integrate the real device, implement the three
- * `TODO(integration)` spots below — see docs/INTEGRATION.md. Nothing in the
- * UI needs to change: it only reacts to `setLinkState()` and `receive()`.
- */
+/** Rust HTTP transport for the uploaded ESP32 firmware. */
 class DeviceConnection {
   private messageListeners = new Set<MessageListener>();
   private linkListeners = new Set<LinkListener>();
   private commandListeners = new Set<CommandListener>();
   private linkState: ConnectionState = "disconnected";
-  private connectTimer: number | undefined;
+  private generation = 0;
+  private active = false;
+  private firmwareListeners = new Set<(status: FirmwareStatus) => void>();
+  latestFirmware: FirmwareStatus | null = null;
+  onFirmware(listener: (status: FirmwareStatus) => void): () => void {
+    this.firmwareListeners.add(listener);
+    return () => { this.firmwareListeners.delete(listener); };
+  }
+  calibrate(cancel = false): Promise<void> {
+    return invoke("sitwell_calibrate", { cancel });
+  }
 
   getLinkState(): ConnectionState {
     return this.linkState;
@@ -28,21 +32,41 @@ class DeviceConnection {
 
   /** Opens the connection to the ESP32-C3. */
   connect(): void {
-    if (this.linkState !== "disconnected") return;
+    if (this.active) return;
+    this.active = true;
+    const generation = ++this.generation;
     this.setLinkState("connecting");
-
-    // TODO(integration): open the real transport here (e.g. invoke a Tauri
-    // command or open a WebSocket to the saved device address). On success
-    // call setLinkState("connected"); for each incoming frame call receive().
-
-    // Phase 1: no transport, so the attempt fails after a timeout.
-    this.connectTimer = window.setTimeout(() => {
-      if (this.linkState === "connecting") this.setLinkState("disconnected");
-    }, CONNECT_TIMEOUT_MS);
+    const poll = async () => {
+      try {
+        const d = await invoke<FirmwareStatus>("sitwell_status");
+        if (generation !== this.generation) return;
+        this.latestFirmware = d;
+        this.setLinkState("connected");
+        this.firmwareListeners.forEach(l => l(d));
+        const at = Date.now();
+        this.messageListeners.forEach(l => l({
+          type: "status", deviceId: "SitWell-C3", online: true,
+          lampConnected: d.ble_connected,
+        }, at));
+        this.messageListeners.forEach(l => l({
+          type: "posture", deviceId: "SitWell-C3", pitch: 0, roll: 0,
+          seated: d.occupied && !d.calibrating, firmwareState: d.state,
+        }, at));
+      } catch (error) {
+        if (generation !== this.generation) return;
+        this.latestFirmware = null;
+        this.setLinkState("disconnected");
+        console.warn("[SitWell]", error);
+      }
+      if (generation === this.generation) window.setTimeout(poll, 700);
+    };
+    void poll();
   }
 
   disconnect(): void {
-    // TODO(integration): close the real transport here.
+    this.active = false;
+    ++this.generation;
+    this.latestFirmware = null;
     this.setLinkState("disconnected");
   }
 
@@ -54,8 +78,7 @@ class DeviceConnection {
   /** Sends a command to the ESP32-C3. Ignored while not connected. */
   send(command: AppCommand): void {
     if (this.linkState !== "connected") return;
-    // TODO(integration): serialize and write to the transport:
-    //   transport.send(JSON.stringify(command))
+    // Firmware owns lamp feedback; these legacy commands are simulator-only.
     this.commandListeners.forEach((l) => l(command));
   }
 
@@ -69,7 +92,7 @@ class DeviceConnection {
 
   /** Called by the transport when the link opens, drops, or retries. */
   setLinkState(state: ConnectionState): void {
-    if (state !== "connecting") window.clearTimeout(this.connectTimer);
+
     if (state === this.linkState) return;
     this.linkState = state;
     this.linkListeners.forEach((l) => l(state));

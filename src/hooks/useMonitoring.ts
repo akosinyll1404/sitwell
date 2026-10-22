@@ -53,7 +53,7 @@ type Action =
   | { type: "link"; state: ConnectionState }
   | { type: "status"; message: StatusMessage }
   | { type: "posture"; message: PostureMessage; at: number; alertDelayMs: number }
-  | { type: "calibrated"; baseline: CalibrationBaseline }
+  | { type: "calibrated"; baseline: CalibrationBaseline | null }
   | { type: "lampReconnecting"; active: boolean }
   | { type: "rescheduleBreak"; elapsedMs: number };
 
@@ -113,7 +113,10 @@ function reducer(state: State, action: Action): State {
     case "posture":
       return applyPosture(state, action.message, action.at, action.alertDelayMs);
     case "calibrated":
-      return { ...state, calibration: action.baseline, lastPosture: null, deviatedSince: null };
+      return { ...state, calibration:
+        action.baseline && state.calibration?.sensors &&
+        JSON.stringify(state.calibration.sensors) === JSON.stringify(action.baseline.sensors)
+          ? state.calibration : action.baseline };
     case "lampReconnecting":
       return { ...state, lampReconnecting: action.active };
     case "rescheduleBreak":
@@ -143,7 +146,7 @@ function applyPosture(state: State, message: PostureMessage, at: number, alertDe
   }
 
   const current =
-    state.calibration && message.seated ? classifyPosture(message, state.calibration) : null;
+    state.calibration && message.seated ? (message.firmwareState !== undefined ? ([1, 4].includes(message.firmwareState) ? "good" : "deviated") : classifyPosture(message, state.calibration)) : null;
   if (current === "deviated" && state.lastPosture !== "deviated") {
     session = { ...session, deviations: session.deviations + 1 };
   }
@@ -167,7 +170,7 @@ function applyPosture(state: State, message: PostureMessage, at: number, alertDe
     notSeatedSince,
     lastPosture: current,
     deviatedSince: current === "deviated" ? (state.deviatedSince ?? at) : null,
-    lastReading: { pitch: message.pitch, roll: message.roll, seated: message.seated, at },
+    lastReading: { firmwareState: message.firmwareState, pitch: message.pitch, roll: message.roll, seated: message.seated, at },
   };
 }
 
@@ -176,6 +179,7 @@ function applyPosture(state: State, message: PostureMessage, at: number, alertDe
  * lasted `alertDelayMs`, poor after that.
  */
 function timeClassAt(reading: PostureReading, state: State, alertDelayMs: number): TimeClass {
+  if (reading.firmwareState !== undefined) return reading.firmwareState === 3 ? "poor" : reading.firmwareState === 2 ? "slouching" : "good";
   if (!state.calibration || classifyPosture(reading, state.calibration) === "good") return "good";
   return state.deviatedSince !== null && reading.at - state.deviatedSince >= alertDelayMs
     ? "poor"
@@ -210,6 +214,10 @@ function deriveSnapshot(
       : state.deviatedSince !== null && now - state.deviatedSince >= alertDelayMs
         ? "poor"
         : "slouching";
+    if (state.lastReading.firmwareState !== undefined) {
+      posture = state.lastReading.firmwareState === 3 ? "poor" :
+        state.lastReading.firmwareState === 2 ? "slouching" : "good";
+    }
     // Extend the session smoothly between samples.
     const live = Math.min(Math.max(now - state.lastReading.at, 0), MAX_SAMPLE_GAP_MS);
     session = {
@@ -273,6 +281,12 @@ export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptio
     const offLink = deviceConnection.onLinkStateChange((linkState) =>
       dispatch({ type: "link", state: linkState }),
     );
+    const offFirmware = deviceConnection.onFirmware(d => {
+      dispatch({ type: "calibrated", baseline: d.calibrated && !d.calibrating ? {
+        basePitch: 0, baseRoll: 0, calibratedAt: 0,
+        sensors: { seat: d.ref_seat, back: d.ref_back, neck: d.ref_neck },
+      } : null });
+    });
     const offMessage = deviceConnection.onMessage((message, at) => {
       if (message.type === "status") dispatch({ type: "status", message });
       else dispatch({ type: "posture", message, at, alertDelayMs: alertDelayRef.current });
@@ -281,6 +295,7 @@ export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptio
     return () => {
       offLink();
       offMessage();
+      offFirmware();
     };
   }, []);
 
@@ -303,6 +318,10 @@ export function useMonitoring({ breakIntervalMs, alertDelayMs }: MonitoringOptio
   useEffect(() => () => window.clearTimeout(lampTimer.current), []);
 
   const reconnectLamp = useCallback(() => {
+    if (deviceConnection.latestFirmware) {
+      window.alert("The ESP32 reconnects to the lamp automatically. Check lamp power and keep it within range.");
+      return;
+    }
     if (deviceConnection.getLinkState() !== "connected") return;
     dispatch({ type: "lampReconnecting", active: true });
     deviceConnection.send({ type: "command", action: "lamp_reconnect" });
