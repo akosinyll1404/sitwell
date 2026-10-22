@@ -22,7 +22,7 @@ const STEPS = [
   "Sit in your preferred correct posture",
   "Keep your back straight and shoulders relaxed",
   "Hold still while baseline readings are collected",
-  "Confirm to save your posture thresholds",
+  "The device saves your baseline automatically after 20 seconds",
 ];
 
 /** Posture baseline setup. Shown first, before the dashboard (FR-C1–C4). */
@@ -35,7 +35,7 @@ export function CalibrationPage({
   onContinue,
   backLabel = "Back to Dashboard",
 }: CalibrationPageProps) {
-  const [progress, startCalibration] = useCalibration(onCalibrated);
+  const [progress, startCalibration, cancelCalibration] = useCalibration(onCalibrated);
   const connected = deviceState === "connected";
   const collecting = progress.status === "collecting";
   const calibrated = progress.status === "success" || existingBaseline !== null;
@@ -92,6 +92,7 @@ export function CalibrationPage({
                     {collecting ? "Calibrating…" : startLabel}
                   </button>
                 </Tooltip>
+                {collecting && <OutlineButton onClick={cancelCalibration}>Cancel calibration</OutlineButton>}
                 <Tooltip
                   content={continueLocked ? "Finish calibration first, or choose Skip for now" : null}
                   disabledTarget={continueLocked}
@@ -203,7 +204,7 @@ function ProgressPanel({
     titleCls = "text-good-fg";
     barCls = "bg-good-accent";
     fill = 1;
-    body = `Baseline saved: pitch ${shownBaseline.basePitch.toFixed(1)}°, roll ${shownBaseline.baseRoll.toFixed(1)}°. Last calibrated: ${formatDate(shownBaseline.calibratedAt)}, ${formatClock(shownBaseline.calibratedAt)}.`;
+    body = shownBaseline.sensors ? `Device baseline — seat: ${shownBaseline.sensors.seat.toFixed(1)}, back: ${shownBaseline.sensors.back.toFixed(1)}, neck: ${shownBaseline.sensors.neck.toFixed(1)}. Stored on ESP32.` : `Baseline saved: pitch ${shownBaseline.basePitch.toFixed(1)}°, roll ${shownBaseline.baseRoll.toFixed(1)}°. Last calibrated: ${formatDate(shownBaseline.calibratedAt)}, ${formatClock(shownBaseline.calibratedAt)}.`;
   } else {
     body = "Not started: readings appear here once calibration begins.";
   }

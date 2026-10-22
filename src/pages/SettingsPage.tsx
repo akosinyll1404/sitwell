@@ -272,7 +272,7 @@ function CalibrationStatus({
     <div className="rounded-xl bg-good-bg p-4">
       <p className="text-lg font-semibold text-good-fg">Calibration completed</p>
       <p className="text-sm text-slate-600">
-        Last calibrated: {formatDate(baseline.calibratedAt)}, {formatClock(baseline.calibratedAt)}
+        {baseline.calibratedAt ? `Last calibrated: ${formatDate(baseline.calibratedAt)}, ${formatClock(baseline.calibratedAt)}` : "Stored baseline loaded from ESP32 (save date unavailable)"}
       </p>
       <OutlineButton className="mt-3" onClick={onRecalibrate}>
         Recalibrate

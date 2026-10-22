@@ -1,3 +1,4 @@
+import { LiveDevicePanel } from "./components/device/LiveDevicePanel";
 import { useEffect, useState } from "react";
 import { DeviceSimulator } from "./components/dev/DeviceSimulator";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -29,6 +30,7 @@ function App() {
   // Try to reach the device on startup. In phase 1 this times out → offline.
   useEffect(() => {
     deviceConnection.connect();
+    return () => deviceConnection.disconnect();
   }, []);
 
   // Keep the device's alert behavior in sync with Settings.
@@ -66,6 +68,7 @@ function App() {
     <>
       {route === "calibration" ? (
         <main className="h-full overflow-y-auto">
+          <LiveDevicePanel />
           <CalibrationPage
             mode={onboarded ? "recalibrate" : "onboarding"}
             deviceState={snapshot.connections.device}
@@ -81,6 +84,7 @@ function App() {
           <Sidebar active={route} onNavigate={navigate} />
           <main className="flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-6xl">
+              <LiveDevicePanel />
               {route === "dashboard" && (
                 <DashboardPage
                   snapshot={snapshot}
@@ -104,7 +108,7 @@ function App() {
         </div>
       )}
 
-      {import.meta.env.DEV && (
+      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_SIMULATOR === "true" && (
         <DeviceSimulator sampleHistory={sampleHistory} onSampleHistoryChange={setSampleHistory} />
       )}
     </>

@@ -29,6 +29,7 @@ export interface PostureMessage {
   /** Device time in Unix seconds (optional; the app stamps its own receive time). */
   timestamp?: number;
   /** Forward/backward tilt in degrees. */
+  firmwareState?: number;
   pitch: number;
   /** Left/right tilt in degrees. */
   roll: number;
