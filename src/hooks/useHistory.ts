@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { sampleDailyTotals, sampleTimeline } from "../dev/sampleHistory";
-import { mergeTimelines } from "../lib/posture";
 import { addDays, startOfDay } from "../lib/time";
 import { historyRepository, type DayTotals } from "../services/historyRepository";
 import type { MonitoringSnapshot, TimelineBucket } from "../types/monitoring";
@@ -29,16 +28,9 @@ interface Stored {
   timelineDay: number | null;
 }
 
-/**
- * Combines saved history (repository, or sample data in dev) with the live
- * session from this app run.
- *
- * NOTE for the database work: once saveSession() persists the *active*
- * session, exclude it from the repository results (or skip the live merge
- * below) so today isn't counted twice.
- */
+/** Saved history includes the active session; never merge live totals twice. */
 export function useHistory(
-  snapshot: MonitoringSnapshot,
+  _snapshot: MonitoringSnapshot,
   useSampleData: boolean,
   selectedDay: number,
 ): HistoryData {
@@ -54,37 +46,39 @@ export function useHistory(
 
   useEffect(() => {
     let cancelled = false;
+    let timer: number | undefined;
     const load = async () => {
-      const [totals, timeline] = useSampleData
-        ? [sampleDailyTotals(rangeStart, today), sampleTimeline(selectedDay)]
-        : await Promise.all([
-            historyRepository.getDailyTotals(rangeStart, today),
-            historyRepository.getTimeline(selectedDay),
-          ]);
-      if (!cancelled) setStored({ totals, timeline, timelineDay: selectedDay });
+      try {
+        const [totals, timeline] = useSampleData
+          ? [sampleDailyTotals(rangeStart, today), sampleTimeline(selectedDay)]
+          : await Promise.all([
+              historyRepository.getDailyTotals(rangeStart, today),
+              historyRepository.getTimeline(selectedDay),
+            ]);
+        if (!cancelled) setStored({ totals, timeline, timelineDay: selectedDay });
+      } catch (error) { console.error("[history] Failed to load history", error); }
+      finally { if (!cancelled) timer = window.setTimeout(load, 5000); }
     };
-    load().catch((error) => console.error("[history] Failed to load history", error));
+    void load();
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [useSampleData, today, rangeStart, selectedDay]);
 
-  const live = snapshot.session;
-
   const totalsFor = (day: number): DailySummary => {
     const saved = stored.totals.find((t) => t.dayStart === day);
-    const isToday = day === today;
-    const goodMs = (saved?.goodMs ?? 0) + (isToday ? live.goodMs : 0);
-    const slouchMs = (saved?.slouchMs ?? 0) + (isToday ? live.slouchMs : 0);
-    const poorMs = (saved?.poorMs ?? 0) + (isToday ? live.poorMs : 0);
+    const goodMs = saved?.goodMs ?? 0;
+    const slouchMs = saved?.slouchMs ?? 0;
+    const poorMs = saved?.poorMs ?? 0;
     return {
       dayStart: day,
       goodMs,
       slouchMs,
       poorMs,
       totalMs: goodMs + slouchMs + poorMs,
-      deviations: (saved?.deviations ?? 0) + (isToday ? live.deviations : 0),
-      breaksTaken: (saved?.breaksTaken ?? 0) + (isToday ? live.breaksTaken : 0),
+      deviations: saved?.deviations ?? 0,
+      breaksTaken: saved?.breaksTaken ?? 0,
     };
   };
 
@@ -92,14 +86,11 @@ export function useHistory(
   for (let i = 0; i < WEEK_DAYS; i++) week.push(totalsFor(addDays(weekStart, i)));
 
   const savedTimeline = stored.timelineDay === selectedDay ? stored.timeline : [];
-  const liveTimeline = snapshot.timeline.filter(
-    (b) => b.start >= selectedDay && b.start < addDays(selectedDay, 1),
-  );
 
   return {
     today,
     week,
     selected: totalsFor(selectedDay),
-    timeline: mergeTimelines(savedTimeline, liveTimeline),
+    timeline: savedTimeline,
   };
 }

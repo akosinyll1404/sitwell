@@ -1,3 +1,7 @@
+## Current SitWell implementation
+
+Rust HTTP device communication and SQLite persistence are implemented. Start with [docs/SQLITE-STORAGE.md](docs/SQLITE-STORAGE.md) for setup and storage tests, and [docs/RUST-DEVICE-CONNECTION.md](docs/RUST-DEVICE-CONNECTION.md) for hardware checks.
+
 # SitWell
 
 ## Prerequisites

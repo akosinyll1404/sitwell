@@ -1,3 +1,5 @@
+> Current implementation: see [SQLITE-STORAGE.md](SQLITE-STORAGE.md) and [RUST-DEVICE-CONNECTION.md](RUST-DEVICE-CONNECTION.md). The proposed protocol/database work below is retained as historical design notes.
+
 # SitWell Integration Guide
 
 This guide explains how to connect real hardware and storage to the Phase 1 UI.

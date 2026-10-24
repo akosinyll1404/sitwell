@@ -33,7 +33,7 @@ export function SessionHistoryTable({ sessions, live, liveRunning, showLive }: S
       poorMs: s.poorPostureSeconds * 1000,
     },
     deviations: s.deviationCount,
-    live: false,
+    live: s.endTime === null,
   }));
   if (showLive && live.startedAt !== null) {
     rows.unshift({
@@ -49,8 +49,7 @@ export function SessionHistoryTable({ sessions, live, liveRunning, showLive }: S
   if (rows.length === 0) {
     return (
       <p className="rounded-xl bg-canvas px-4 py-6 text-center text-sm text-muted">
-        No sessions yet. Past sessions will be listed here once monitoring has run and the
-        database is connected.
+        No saved sessions yet. Sessions appear after calibrated, seated readings arrive.
       </p>
     );
   }

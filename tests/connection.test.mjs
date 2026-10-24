@@ -47,3 +47,4 @@ test("polling forwards firmware state, recovers after failure, and ignores late 
   assert.equal(c.latestFirmware, null);
   assert.equal(timers.length, 0);
 });
+

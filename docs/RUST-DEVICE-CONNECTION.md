@@ -39,5 +39,5 @@ The firmware's transformed sensor units and saved references need hardware valid
 ## Validation performed
 - Frontend production build (TypeScript + Vite).
 - Automated mocked transport test: payload forwarding, error recovery, calibration commands, and stale in-flight results after disconnect.
-- Rust compilation and live hardware verification must be run on Windows; this execution environment has no cargo compiler or ESP32.
-Cargo.lock is retained from the original upload; Cargo will update it to include reqwest on the first build. Do not use --locked for that first build.
+- The production SQLite modules compile and their Rust integration tests pass without an ESP32. The full Windows desktop build and live device checks still need to run on Windows.
+Cargo.lock now includes reqwest and the SQLite dependencies. See SQLITE-STORAGE.md for the current storage implementation and tests.

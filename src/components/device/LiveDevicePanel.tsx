@@ -1,3 +1,4 @@
+import { StorageStatus } from "./StorageStatus";
 import { useEffect, useState } from "react";
 import { deviceConnection } from "../../services/deviceConnection";
 import type { FirmwareStatus } from "../../types/firmware";
@@ -20,5 +21,6 @@ export function LiveDevicePanel() {
       {status.state === 4 && <p className="font-semibold text-brand">Consider taking a movement break.</p>}
     </>}
     <p className="mt-2 text-xs text-muted">The ESP32 controls posture thresholds and lamp feedback. Lamp reconnect is automatic. App alert preferences do not change firmware behavior. History groups prolonged sitting with good posture; the device status above shows all five states.</p>
+    <StorageStatus />
   </section>;
 }
