@@ -1,4 +1,5 @@
 export interface FirmwareStatus {
+  storage_error?: string;
   calibrated: boolean; calibrating: boolean;
   elapsed_ms: number; duration_ms: number; samples: number;
   seat: number; back: number; neck: number;

@@ -151,7 +151,7 @@ export function HistoryPage({ snapshot, useSampleData }: HistoryPageProps) {
       </Card>
 
       <Card title="Session History">
-        <SessionHistoryTable sessions={sessions} live={session} liveRunning={running} showLive={page === 1} />
+        <SessionHistoryTable sessions={sessions} live={session} liveRunning={running} showLive={useSampleData && page === 1} />
         {total > 0 && (
           <Pagination
             page={page}

@@ -1,3 +1,5 @@
+import { storageInvoke } from "./storage";
+import { addDays } from "../lib/time";
 import type { TimelineBucket } from "../types/monitoring";
 
 /**
@@ -51,28 +53,36 @@ export interface HistoryRepository {
    * midnights, inclusive) that has data. Days without data are omitted.
    */
   getDailyTotals(fromDay: number, toDay: number): Promise<DayTotals[]>;
-  /** Insert or update a session (call periodically and when a session ends). */
-  saveSession(session: SessionRecord): Promise<void>;
+
 }
 
-/**
- * PHASE 1 placeholder: no database yet, so nothing is stored or returned and
- * History only shows the live session from the current app run.
- *
- * TODO(database): replace with a SQLite implementation (tauri-plugin-sql or
- * Tauri commands backed by rusqlite). See docs/INTEGRATION.md → Database.
- */
+interface RangeTotals {
+  start: number; goodMs: number; slouchMs: number; poorMs: number;
+  deviations: number; breaksTaken: number;
+}
+
+/** Rust records samples and updates sessions atomically; the UI only reads history. */
 export const historyRepository: HistoryRepository = {
-  async listSessions() {
-    return { sessions: [], total: 0 };
+  listSessions(options) {
+    return storageInvoke<SessionPage>("history_sessions", options);
   },
-  async getTimeline() {
-    return [];
+  async getTimeline(dayStart) {
+    const end = addDays(dayStart, 1);
+    const ranges = [];
+    for (let start = dayStart; start < end; start += 30 * 60_000) {
+      ranges.push({ start, end: Math.min(start + 30 * 60_000, end) });
+    }
+    const totals = await storageInvoke<RangeTotals[]>("history_totals", { ranges });
+    return totals.map(t => ({ start: t.start, goodMs: t.goodMs, slouchMs: t.slouchMs, poorMs: t.poorMs }));
   },
-  async getDailyTotals() {
-    return [];
-  },
-  async saveSession() {
-    // Not persisted in phase 1.
+  async getDailyTotals(fromDay, toDay) {
+    const ranges = [];
+    for (let day = fromDay; day <= toDay; day = addDays(day, 1)) {
+      if (ranges.length >= 3700) throw new Error("Select a history range within 10 years.");
+      ranges.push({ start: day, end: addDays(day, 1) });
+    }
+    const totals = await storageInvoke<RangeTotals[]>("history_totals", { ranges });
+    return totals.map(t => ({ dayStart: t.start, goodMs: t.goodMs, slouchMs: t.slouchMs,
+      poorMs: t.poorMs, deviations: t.deviations, breaksTaken: t.breaksTaken }));
   },
 };

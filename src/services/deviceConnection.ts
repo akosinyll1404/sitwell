@@ -1,3 +1,4 @@
+import { setStorageError } from "./storage";
 import { invoke } from "@tauri-apps/api/core";
 import type { FirmwareStatus } from "../types/firmware";
 import type { AppCommand, DeviceMessage } from "../types/device";
@@ -40,6 +41,7 @@ class DeviceConnection {
       try {
         const d = await invoke<FirmwareStatus>("sitwell_status");
         if (generation !== this.generation) return;
+        setStorageError("recording", d.storage_error ?? null);
         this.latestFirmware = d;
         this.setLinkState("connected");
         this.firmwareListeners.forEach(l => l(d));
